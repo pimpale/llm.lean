@@ -1,22 +1,15 @@
 import Lake
 open System Lake DSL
 
-package ffi where
+package llm.lean where
   srcDir := "lean"
 
-lean_lib FFI
+lean_lib LinearAlgebra
+lean_lib Llm
 
 @[default_target]
 lean_exe test where
   root := `Main
 
-target ffi.o pkg : FilePath := do
-  let oFile := pkg.buildDir / "c" / "ffi.o"
-  let srcJob ← inputTextFile <| pkg.dir / "c" / "ffi.cpp"
-  let weakArgs := #["-I", (← getLeanIncludeDir).toString]
-  buildO oFile srcJob weakArgs #["-fPIC"] "c++" getLeanTrace
-
-extern_lib libleanffi pkg := do
-  let ffiO ← ffi.o.fetch
-  let name := nameToStaticLib "leanffi"
-  buildStaticLib (pkg.nativeLibDir / name) #[ffiO]
+require mathlib from git
+  "https://github.com/leanprover-community/mathlib4.git"
