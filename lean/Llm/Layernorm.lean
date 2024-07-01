@@ -74,6 +74,7 @@ def layernorm_forward_batch
   (inp: Vector (Vector (Vector Float C) T) B)
   (weight: Vector Float C)
   (bias: Vector Float C)
+  -- mean, rstd, out
 : ((Vector (Vector Float T) B) × (Vector (Vector Float T) B) ×   (Vector (Vector (Vector Float C) T) B))
   :=
     let all_data := inp.map (λ inp => inp.map (λ inp => layernorm_forward inp weight bias))
@@ -119,5 +120,22 @@ def layernorm_backward
   let dnorm_norm_mean := Vector.replicate C (vec_mean (Vector.hadamard dnorm norm));
   let dx := dnorm - dnorm_mean - norm * dnorm_norm_mean;
   let dx := dx * Vector.replicate C rstd;
+
+  (dx, dw, db)
+
+def layernorm_backward_batch
+  (dout: Vector (Vector (Vector Float C) T) B)
+  (inp: Vector (Vector (Vector Float C) T) B)
+  (mean: Vector (Vector Float T) B)
+  (rstd: Vector (Vector Float T) B)
+  (weight: Vector Float C)
+  -- dx, dw, db
+: (Vector (Vector (Vector Float C) T) B) × (Vector (Vector Float C) B) × (Vector (Vector Float C) B)
+ :=
+  let all_data := Vector.ofFn (λ b: Fin B => Vector.ofFn λ t: Fin T => layernorm_backward dout[b][t] inp[b][t] mean[b][t] rstd[b][t] weight);
+
+  let dx := all_data.map (λ row => row.map (λ (dx, _, _) => dx));
+  let dw := all_data.map (λ row => vec_sum <| row.map (λ (_, dw, _) => dw));
+  let db := all_data.map (λ row => vec_sum <| row.map (λ (_, _, db) => db));
 
   (dx, dw, db)
