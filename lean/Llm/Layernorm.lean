@@ -46,6 +46,12 @@ import LinearAlgebra.Vector
 
 def eps := 1e-5
 
+def vec_sum [Add α] [Zero α] (v: Vector α N) : α :=
+  v.foldl Add.add 0
+
+def vec_mean (v: Vector Float N) : Float :=
+  vec_sum v / N.toFloat
+
 def layernorm_forward
   (inp: Vector Float C)
   (weight: Vector Float C)
@@ -53,9 +59,10 @@ def layernorm_forward
 : Float × Float × (Vector Float C)
   :=
   -- calculate the mean
-  let mean := (inp.foldl (λ m x => m + x) 0.0) / C.toFloat;
+  let mean := vec_mean inp;
   -- calculate the variance (without any bias correction)
-  let variance := (inp.foldl (λ v x => v + (x - mean) * (x - mean)) 0) / C.toFloat;
+  let xshift := inp - Vector.replicate C mean;
+  let variance := vec_mean (Vector.hadamard xshift xshift);
   -- calculate the rstd (reciprocal standard deviation)
   let rstd := 1 / (variance + eps).sqrt;
   -- normalize, scale, and shift
@@ -78,9 +85,39 @@ def layernorm_forward_batch
     (mean, rstd, out)
 
 
+    -- @staticmethod
+    -- def layernorm_backward(dout, cache):
+    --     x, w, mean, rstd = cache
+    --     # recompute the norm (save memory at the cost of compute)
+    --     norm = (x - mean) * rstd
+    --     # gradients for weights, bias
+    --     db = dout.sum((0, 1))
+    --     dw = (dout * norm).sum((0, 1))
+    --     # gradients for input
+    --     dnorm = dout * w
+    --     dx = dnorm - dnorm.mean(-1, keepdim=True) - norm * (dnorm * norm).mean(-1, keepdim=True)
+    --     dx *= rstd
+    --     return dx, dw, db
+
 def layernorm_backward
   (dout: Vector Float C)
   (inp: Vector Float C)
   (mean: Float)
   (rstd: Float)
   (weight: Vector Float C)
+-- dx, dw, db
+: (Vector Float C) × (Vector Float C) × (Vector Float C)
+  :=
+  -- recomputing the norm
+  let norm := (inp - Vector.replicate C mean) * Vector.replicate C rstd;
+  -- gradients for weights, bias
+  let db := dout
+  let dw := (Vector.hadamard dout norm)
+  -- gradients for input
+  let dnorm := dout * weight;
+  let dnorm_mean := Vector.replicate C (vec_mean dnorm);
+  let dnorm_norm_mean := Vector.replicate C (vec_mean (Vector.hadamard dnorm norm));
+  let dx := dnorm - dnorm_mean - norm * dnorm_norm_mean;
+  let dx := dx * Vector.replicate C rstd;
+
+  (dx, dw, db)
