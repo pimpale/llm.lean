@@ -56,6 +56,7 @@ def matmul_batched {α : Type u} [Add α] [Mul α] [Zero α] {B T C OC: Nat} (a:
   let batched_transpose_b := b.map (·.transpose)
   a.zip batched_transpose_b |>.map (λ (a, b) => matmul a b)
 
+
 def _root_.Std.Range.foldr (r: Std.Range) (f: Nat -> b -> b) (init: b) : b := Id.run do
   let mut acc := init
   for i in r do
