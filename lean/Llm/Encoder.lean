@@ -40,8 +40,7 @@ def encoder_forward
   (wte: Vector (Vector Float C) V)
   (wpe: Vector (Vector Float C) maxT)
   (h: T ≤ maxT)
-: Vector (Vector Float C) T
- :=
+: Vector (Vector Float C) T :=
   inp.mapIdx (λ idx ix => (wte.get ix) + (wpe.get (finMaxT_of_finT h idx)))
 
 def encoder_forward_batch
@@ -103,15 +102,31 @@ def encoder_backward
     ((t: Fin T),(d: Vector Float C))
   => dwpe.modify (finMaxT_of_finT h t) (λ v => v + d)
 
-  let init_dwpe := .replicate maxT (.replicate C 0)
+  let init_dwpe := .replicate maxT (.replicate C 0.0)
   let dwpe := Vector.foldl dwpe_updater init_dwpe (Vector.mapIdx Prod.mk dout)
 
   (dwte, dwpe)
 
 
--- accumulate over batches
+-- out is (B,T,C). At each position (b,t), a C-dimensional vector summarizing token & position
+-- inp is (B,T) of integers, holding the token ids at each (b,t) position
+-- wte is (V,C) of token embeddings, short for "weight token embeddings"
+-- wpe is (maxT,C) of position embeddings, short for "weight positional embedding"
+
+-- Alok: remember dims read backward
+/-- accumulate over batches -/
 def encoder_backward_batch
-  (dout: Vector (Vector (Vector Float C) T) B)
-  (inp: Vector (Vector (Fin V) T) B)
-: (Vector (Vector Float C) V) × (Vector (Vector Float C) V)
+  (dout_b: Vector (Vector (Vector Float C) T) B)
+  (inp_b: Vector (Vector (Fin V) T) B)
+  (h: T ≤ maxT)
+  -- gradient is accumulated, so no batch dim in output `dwte` or `dwpe`
+: ( Vector (Vector Float C) V) × ( Vector (Vector Float C) maxT)
 :=
+  let all_data :=
+    (dout_b.zip inp_b).map (λ (dout_b, inp_b) => encoder_backward dout_b inp_b h)
+  let dwte_b := (all_data.map Prod.fst)
+  let dwpe_b := (all_data.map Prod.snd)
+  let dwte := dwte_b.foldl Vector.add Vector.zero
+  let dwpe := dwpe_b.foldl Vector.add Vector.zero
+
+  (dwte, dwpe)
