@@ -46,7 +46,6 @@ syntax "!v[" withoutPosition(sepBy(term, ", ")) "]" : term
 macro_rules
   | `(!v[ $elems,* ]) => `(Vector.ofList [ $elems,* ])
 
-
 @[inline]
 def singleton (x:α) : Vector α 1 :=
   Vector.replicate 1 x
@@ -166,6 +165,19 @@ def hadamard {α : Type u} [Mul α] {n: Nat} (a b: Vector α n) : Vector α n :=
 
 def dot {α : Type u} [Add α] [Mul α] [Zero α] {n: Nat} (a b: Vector α n) : α :=
   Array.foldl (·+·) 0 (Vector.zipWith (·*·) a b).data
+
+def transpose  (v: Vector (Vector α C) R) : Vector (Vector α R) C :=
+  Vector.ofFn (fun c => Vector.ofFn (fun r => v[r][c]))
+
+def matmul {α : Type u} [Add α] [Mul α] [Zero α] {R C I: Nat} (a: Vector (Vector α I) R) (b: Vector (Vector α C) I) : Vector (Vector α C) R :=  Id.run do
+  let rows := a
+  let cols := b.transpose
+
+  Vector.ofFn (fun r =>
+    Vector.ofFn (fun c =>
+      rows[r].dot cols[c]
+    )
+  )
 
 -- Some theorems
 @[simp]
