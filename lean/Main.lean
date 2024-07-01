@@ -1,4 +1,6 @@
-import FFI
+import LinearAlgebra.Vector
+
+#check Vector
 
 def main : IO Unit :=
-  IO.println <| myAdd 1 2
+  IO.println <| 1

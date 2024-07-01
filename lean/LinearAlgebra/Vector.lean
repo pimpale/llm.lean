@@ -79,6 +79,14 @@ def set (v: Vector α n) (i : Fin n) (a : α) : Vector α n :=
   }
 
 @[inline]
+def foldl {α β: Type u} {n: Nat} (f: β → α → β) (init: β) (v: Vector α n) : β :=
+  Array.foldl f init v.data
+
+@[inline]
+def modify (i: Fin n) (f: α → α) (v: Vector α n) : Vector α n :=
+  set v i (f (get v i))
+
+@[inline]
 def push (v: Vector α n) (a : α) : Vector α (n + 1) :=  {
   data := Array.push v.data a,
   isEq := Eq.trans (Array.size_push v.data a) (congrArg Nat.succ v.isEq)
@@ -120,6 +128,8 @@ def zipWithAux {α β γ:Type u} {i n:Nat} (f : α → β → γ) (as : Vector �
 def zipWith {α : Type u} {β : Type u} {γ : Type u} {n: Nat} (f: α → β → γ) (v1: Vector α n) (v2: Vector β n): Vector γ n :=
   zipWithAux f v1 v2 ⟨Array.mkEmpty n, rfl⟩ (by simp)
 
+def zip {α : Type u} {β : Type u} {n: Nat} (v1: Vector α n) (v2: Vector β n): Vector (α × β) n :=
+  zipWith Prod.mk v1 v2
 
 @[inline]
 def map {α : Type u} {β : Type u} {n: Nat} (f: α → β) (v: Vector α n) : Vector β n := {
