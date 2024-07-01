@@ -1,4 +1,4 @@
-'import LinearAlgebra.Vector
+import LinearAlgebra.Vector
 
 -- void encoder_forward(float* out,
 --                    int* inp, float* wte, float* wpe,
@@ -108,10 +108,6 @@ def encoder_backward
 
   (dwte, dwpe)
 
-def idk: Char := Id.run do
-  for h : i in [:10] do
-    return 'a'
-  return 'a'
 
 -- accumulate over batches
 def encoder_backward_batch
@@ -119,4 +115,3 @@ def encoder_backward_batch
   (inp: Vector (Vector (Fin V) T) B)
 : (Vector (Vector Float C) V) × (Vector (Vector Float C) V)
 :=
-'
