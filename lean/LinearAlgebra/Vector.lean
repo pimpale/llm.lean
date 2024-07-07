@@ -14,7 +14,7 @@ def proveLen {n:Nat} {n':Nat} (v:Vector α n) (h: v.data.size = n'): Vector α n
 }
 
 @[inline]
-def empty {α : Type u} : Vector α 0 := {
+def empty : Vector α 0 := {
   data := Array.empty
   isEq := List.length_nil
 }
@@ -24,6 +24,10 @@ def replicate (n: Nat) (x: α) : Vector α n := {
     data := Array.mkArray n x,
     isEq := Array.size_mkArray n x
 }
+
+@[inline]
+def of (a: α) : Vector α n :=
+  replicate n a
 
 @[inline]
 def ofFn {n: Nat} (f: Fin n -> α) : Vector α n := {
@@ -51,12 +55,12 @@ def singleton (x:α) : Vector α 1 :=
   Vector.replicate 1 x
 
 /-- prove that i < v.data.size if i < n-/
-theorem lt_n_lt_data_size {α : Type u} {n :Nat} (v: Vector α n) (i : Fin n)
+theorem lt_n_lt_data_size {n :Nat} (v: Vector α n) (i : Fin n)
   : (i < v.data.size)
   := Nat.lt_of_lt_of_eq i.isLt (Eq.symm v.isEq)
 
 /-- prove that i < n if i < v.array.size-/
-theorem lt_data_size_lt_n {α : Type u} {i n :Nat}  (v: Vector α n) (h: i < v.data.size)
+theorem lt_data_size_lt_n {i n :Nat}  (v: Vector α n) (h: i < v.data.size)
   : (i < n)
   := v.isEq.symm ▸ h
 
@@ -124,20 +128,20 @@ def zipWithAux {α β γ:Type u} {i n:Nat} (f : α → β → γ) (as : Vector �
     zipWithAux f as bs (acc.push (f a b)) h2
 
 @[inline]
-def zipWith {α : Type u} {β : Type u} {γ : Type u} {n: Nat} (f: α → β → γ) (v1: Vector α n) (v2: Vector β n): Vector γ n :=
+def zipWith {β : Type u} {γ : Type u} {n: Nat} (f: α → β → γ) (v1: Vector α n) (v2: Vector β n): Vector γ n :=
   zipWithAux f v1 v2 ⟨Array.mkEmpty n, rfl⟩ (by simp)
 
-def zip {α : Type u} {β : Type u} {n: Nat} (v1: Vector α n) (v2: Vector β n): Vector (α × β) n :=
+def zip {β : Type u} {n: Nat} (v1: Vector α n) (v2: Vector β n): Vector (α × β) n :=
   zipWith Prod.mk v1 v2
 
 @[inline]
-def map {α : Type u} {β : Type u} {n: Nat} (f: α → β) (v: Vector α n) : Vector β n := {
+def map {β : Type u} {n: Nat} (f: α → β) (v: Vector α n) : Vector β n := {
   data := Array.map f v.data,
   isEq := Eq.trans (Array.size_map f v.data) v.isEq
 }
 
 @[inline]
-def mapIdx {α : Type u} {β : Type u} {n: Nat} (f: Fin n → α → β) (v: Vector α n) : Vector β n :=
+def mapIdx {β : Type u} {n: Nat} (f: Fin n → α → β) (v: Vector α n) : Vector β n :=
   letI f' := fun (i: Fin v.data.size) => f (Fin.mk i.val (Nat.lt_of_lt_of_eq i.isLt v.isEq));
   {
     data := Array.mapIdx v.data f',
@@ -154,22 +158,28 @@ def neg [Neg α] (v: Vector α n) : Vector α n := Vector.map (-·) v
 def add [Add α] (v1: Vector α n) (v2: Vector α n) : Vector α n :=
   Vector.zipWith (·+·) v1 v2
 
-def sub {α : Type u} [Sub α] {n: Nat} (a b: Vector α n) : Vector α n :=
-  Vector.zipWith (·-·) a b
+def sub [Sub α] {n: Nat} (a b: Vector α n) : Vector α n :=
+  zipWith (·-·) a b
 
-def scale {α : Type u} [Mul α] {n: Nat} (k: α) (v: Vector α n) : Vector α n :=
+def scale [Mul α] {n: Nat} (k: α) (v: Vector α n) : Vector α n :=
   v.map (fun x => k*x)
 
-def hadamard {α : Type u} [Mul α] {n: Nat} (a b: Vector α n) : Vector α n :=
-  Vector.zipWith (·*·) a b
+def hadamard [Mul α] {n: Nat} (a b: Vector α n) : Vector α n :=
+  zipWith (·*·) a b
 
-def dot {α : Type u} [Add α] [Mul α] [Zero α] {n: Nat} (a b: Vector α n) : α :=
-  Array.foldl (·+·) 0 (Vector.zipWith (·*·) a b).data
+def sum [Add α] [Zero α] {n: Nat} (v: Vector α n) : α :=
+  foldl (·+·) 0 v
+
+def dot [Add α] [Mul α] [Zero α] {n: Nat} (a b: Vector α n) : α :=
+  sum (hadamard a b)
+
+#eval 11 = !v[1, 2].dot !v[3, 4]
 
 def transpose  (v: Vector (Vector α C) R) : Vector (Vector α R) C :=
   Vector.ofFn (fun c => Vector.ofFn (fun r => v[r][c]))
 
-def matmul {α : Type u} [Add α] [Mul α] [Zero α] {R C I: Nat} (a: Vector (Vector α I) R) (b: Vector (Vector α C) I) : Vector (Vector α C) R :=  Id.run do
+
+def matmul [Add α] [Mul α] [Zero α] {R C I: Nat} (a: Vector (Vector α I) R) (b: Vector (Vector α C) I) : Vector (Vector α C) R :=  Id.run do
   let rows := a
   let cols := b.transpose
 
@@ -238,19 +248,19 @@ theorem get_truncate {α: Type u} {n : Nat} (v: Vector α n) (n': Nat) (h: n' �
   : (v.truncate n' h)[i] = v[i]
   := get_ofFn (fun i => v[i]) i
 
-theorem get_map {α : Type u} {β : Type u} {n: Nat} (f: α → β) (v: Vector α n) (i: Fin n)
+theorem get_map {β : Type u} {n: Nat} (f: α → β) (v: Vector α n) (i: Fin n)
   : (v.map f)[i] = f v[i]
   := Array.getElem_map f v.data i (lt_n_lt_data_size (v.map f) i)
 
 
-theorem get_mapIdx {α : Type u} {β : Type u} {n: Nat} (f: Fin n → α → β) (v: Vector α n) (i: Fin n)
+theorem get_mapIdx {β : Type u} {n: Nat} (f: Fin n → α → β) (v: Vector α n) (i: Fin n)
   : (v.mapIdx f)[i] = f i v[i]
   :=
     letI f' := fun (i: Fin v.data.size) => f (Fin.mk i.val (Nat.lt_of_lt_of_eq i.isLt v.isEq))
     Array.getElem_mapIdx v.data f' i (lt_n_lt_data_size (v.mapIdx f) i)
 
 /-- After push, the last element of the array is what we pushed -/
-theorem get_push_eq {α : Type u} {n: Nat} (v: Vector α n) (a: α)
+theorem get_push_eq {n: Nat} (v: Vector α n) (a: α)
   : (v.push a)[n] = a
   :=
      -- prove that n < v.push.data.size
@@ -265,7 +275,7 @@ theorem get_push_eq {α : Type u} {n: Nat} (v: Vector α n) (a: α)
 
 
 /-- After push, the previous elements are the same -/
-theorem get_push_lt {α : Type u} {n: Nat} (v: Vector α n) (a: α) (i: Fin n)
+theorem get_push_lt {n: Nat} (v: Vector α n) (a: α) (i: Fin n)
   : (v.push a)[i] = v[i]
   :=
     have i_lt_size_data : i.val < v.data.size := lt_n_lt_data_size v i
@@ -275,7 +285,7 @@ theorem replace_index (v: Vector α n) (i j: Nat) (h1: i < n) (h2: j < n) (h3: i
   : v[i] = v[j]
   := by simp only [h3]
 
-theorem get_push' {α : Type u} {n: Nat} (v: Vector α n) (a: α) (i: Nat) (h: i < n+1)
+theorem get_push' {n: Nat} (v: Vector α n) (a: α) (i: Nat) (h: i < n+1)
   : (v.push a)[i]'h = if h1:i < n then v[i]'h1 else a
   := by
     split
@@ -288,7 +298,7 @@ theorem get_push' {α : Type u} {n: Nat} (v: Vector α n) (a: α) (i: Nat) (h: i
       rw [replace_index (push v a) i n h (by simp) h2]
       exact get_push_eq v a
 
-theorem get_push {α : Type u} {n: Nat} (v: Vector α n) (a: α) (i: Fin (n+1))
+theorem get_push {n: Nat} (v: Vector α n) (a: α) (i: Fin (n+1))
   : (v.push a)[i] = if h:i < n then v[i]'h else a
   := get_push' v a i.val i.isLt
 
@@ -346,7 +356,7 @@ theorem Fin_0_absurd (i: Fin 0) : False
 
 /-- If we construct a vector through zipWith, then the i'th element is f a[i] b[i] -/
 @[simp]
-theorem get_zipWith {α : Type u} {β : Type u} {γ : Type u} {n: Nat} (f: α → β → γ) (v1: Vector α n) (v2: Vector β n) (i: Fin n)
+theorem get_zipWith {β : Type u} {γ : Type u} {n: Nat} (f: α → β → γ) (v1: Vector α n) (v2: Vector β n) (i: Fin n)
   : (Vector.zipWith f v1 v2)[i] = f v1[i] v2[i]
   := by unfold zipWith
         exact get_zipWithAux
@@ -392,8 +402,8 @@ instance : Inhabited (Vector α 0) where default := empty
 instance [Zero α] : Zero (Vector α n) where zero := zero
 instance [One α] : One (Vector α n) where one := one
 instance [Neg α] : Neg (Vector α n) where neg := neg
-instance {α : Type u} [Add α] {n: Nat} : Add (Vector α n) where add := add
-instance {α : Type u} [Sub α] {n: Nat} : Sub (Vector α n) where sub := sub
-instance {α : Type u} [Mul α] {n: Nat} : Mul (Vector α n) where mul := hadamard
+instance [Add α] {n: Nat} : Add (Vector α n) where add := add
+instance [Sub α] {n: Nat} : Sub (Vector α n) where sub := sub
+instance [Mul α] {n: Nat} : Mul (Vector α n) where mul := hadamard
 
 end Vector
