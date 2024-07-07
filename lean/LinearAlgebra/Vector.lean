@@ -221,7 +221,7 @@ theorem get_ofFn {n: Nat} (f: Fin n -> α) (i: Fin n)
 theorem Array_getElem_mk {n: Nat} (a:α) (i: Nat) (h: i < Array.size (Array.mkArray n a))
   : (Array.mkArray n a)[i] = a
   := by
-    rw [Array.getElem_eq_data_get]
+    rw [Array.getElem_eq_data_getElem]
     simp [Array.mkArray_data]
 
 /-- If we construct a vector through replicate, then each element is the provided function -/

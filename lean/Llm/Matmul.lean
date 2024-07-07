@@ -41,7 +41,7 @@ import LinearAlgebra.Vector
 -- }
 
 
-def matmul {α : Type u} [Add α] [Mul α] [Zero α] {R C I: Nat} (a: Vector (Vector α I) R) (b: Vector (Vector α C) I) : Vector (Vector α C) R :=  Id.run do
+def matmul {α : Type u} [Add α] [Mul α] [Zero α] {R C I: Nat} (a: Vector (Vector α I) R) (b: Vector (Vector α C) I) : Vector (Vector α C) R :=
   let rows := a
   let cols := b.transpose
 
@@ -51,11 +51,11 @@ def matmul {α : Type u} [Add α] [Mul α] [Zero α] {R C I: Nat} (a: Vector (Ve
     )
   )
 
-def matmul_batched {α : Type u} [Add α] [Mul α] [Zero α] {B T C OC: Nat} (a: Vector (Vector (Vector α C) T) B) (b: Vector (Vector (Vector α C) OC) B) : Vector (Vector (Vector α OC) T) B := Id.run do
-  -- TODO i miss reshape already
-  let batched_transpose_b := b.map (·.transpose)
-  a.zip batched_transpose_b |>.map (λ (a, b) => matmul a b)
-
+-- a: B x T x C
+-- b: B x C x OC
+-- out: B x T x OC
+def matmul_batched [Add α] [Mul α] [Zero α] (a: Vector (Vector (Vector α P) M) B) (b: Vector (Vector (Vector α N) P) B) : Vector (Vector (Vector α N) M) B :=
+  .zipWith matmul a b
 
 def _root_.Std.Range.foldr (r: Std.Range) (f: Nat -> b -> b) (init: b) : b := Id.run do
   let mut acc := init
@@ -72,33 +72,40 @@ def _root_.Std.Range.foldl (r: Std.Range) (f: b -> Nat -> b) (init: b) : b := Id
 #eval [0:5].foldr (λ i acc => acc + i) 0
 #eval [0:5].foldl (λ acc i => acc + i) 0
 
-/-- unbatched backward. -/
+/--
+  unbatched backward.
+  returns dinp, dweight
+-/
 def matmul_backward
-  {T C OC: Nat}
-  (dinp: Vector (Vector Float C) T)
-  (dweight: Vector (Vector Float C) OC)
-  (weight: Vector (Vector Float C) OC)
-  (dout: Vector (Vector Float OC) T)
-  (inp: Vector (Vector Float C) T)
-: (Vector (Vector Float C) T) × (Vector (Vector Float C) OC)
+  (inp: Vector (Vector Float N) P)
+  (weight: Vector (Vector Float P) M)
+  (dout: Vector (Vector Float N) M)
+: (Vector (Vector Float N) P) × (Vector (Vector Float P) M)
 :=
+  -- first define transposes
+  let inp_t := inp.transpose
+  let weight_t := weight.transpose
 
-  -- Backward into inp
-  let dinp' := dinp.mapIdx (λ t col =>
-    col.mapIdx (λ i _ =>
-      ([0:OC]).foldl (λ acc o =>
-        acc + (weight[o]'sorry)[i]'sorry * dout[t][o]'sorry
-      ) 0
-    )
-  )
+  let dinp := matmul weight_t dout
+  let dweight := matmul dout inp_t
 
-  -- Backward into weight
-  let dweight' := dweight.mapIdx (λ o row =>
-    row.mapIdx (λ i _ =>
-      ([0:T]).foldl (λ acc t =>
-        acc + (inp[t]'sorry)[i]'sorry * (dout[t]'sorry)[o]'sorry
-      ) 0
-    )
-  )
+  (dinp, dweight)
 
-  (dinp', dweight')
+/--
+  We reduce the weight but not the input.
+-/
+def matmul_backward_batched
+  (inp: Vector (Vector (Vector Float N) P) B)
+  (weight: Vector (Vector (Vector Float P) M) B)
+  (dout: Vector (Vector (Vector Float N) M) B)
+: (Vector (Vector (Vector Float N) P) B) × (Vector (Vector Float P) M)
+:=
+  let inp_t := inp.map (λ x => x.transpose)
+  let weight_t := weight.map (λ x => x.transpose)
+
+  let dinp_b := matmul_batched weight_t dout
+  let dweight_b := matmul_batched dout inp_t
+
+  let dweight := dweight_b.foldl (·+·) 0
+
+  (dinp_b, dweight)
