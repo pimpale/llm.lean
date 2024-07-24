@@ -1,31 +1,5 @@
 import LinearAlgebra.Vector
 
--- void encoder_forward(float* out,
---                    int* inp, float* wte, float* wpe,
---                    int B, int T, int C) {
---     // out is (B,T,C). At each position (b,t), a C-dimensional vector summarizing token & position
---     // inp is (B,T) of integers, holding the token ids at each (b,t) position
---     // wte is (V,C) of token embeddings, short for "weight token embeddings"
---     // wpe is (maxT,C) of position embeddings, short for "weight positional embedding"
---     for (int b = 0; b < B; b++) {
---         for (int t = 0; t < T; t++) {
---             // seek to the output position in out[b,t,:]
---             float* out_bt = out + b * T * C + t * C;
---             // get the index of the token at inp[b, t]
---             int ix = inp[b * T + t];
---             // seek to the position in wte corresponding to the token
---             float* wte_ix = wte + ix * C;
---             // seek to the position in wpe corresponding to the position
---             float* wpe_t = wpe + t * C;
---             // add the two vectors and store the result in out[b,t,:]
---             for (int i = 0; i < C; i++) {
---                 out_bt[i] = wte_ix[i] + wpe_t[i];
---             }
---         }
---     }
--- }
-
-
 def finMaxT_of_finT
   (h: T ≤ maxT)
   (t: Fin T)
@@ -52,37 +26,6 @@ def encoder_forward_batch
   :=
     inp.map (λ inp => encoder_forward inp wte wpe h)
 
-
--- void encoder_backward(float* dwte, float* dwpe,
---                       float* dout, int* inp,
---                       int B, int T, int C) {
---     // Iterate over each batch
---     for (int b = 0; b < B; b++) {
---         // Iterate over each token position
---         for (int t = 0; t < T; t++) {
---             // Calculate the pointer to the current position in dout
---             float* dout_bt = dout + b * T * C + t * C;
---             // Get the token index at the current position
---             int ix = inp[b * T + t];
---             // Calculate the pointer to the corresponding position in dwte
---             float* dwte_ix = dwte + ix * C;
---             // Calculate the pointer to the corresponding position in dwpe
---             float* dwpe_t = dwpe + t * C;
---             // Iterate over each dimension of the embedding
---             for (int i = 0; i < C; i++) {
---                 // Get the gradient at the current position
---                 float d = dout_bt[i];
---                 // Accumulate the gradient for the token embedding
---                 dwte_ix[i] += d;
---                 // Accumulate the gradient for the position embedding
---                 dwpe_t[i] += d;
---             }
---         }
---     }
--- }
-
-
-
 def encoder_backward
   (dout: Vector (Vector Float C) T)
   (inp: Vector (Fin V) T)
@@ -107,26 +50,23 @@ def encoder_backward
 
   (dwte, dwpe)
 
-
--- out is (B,T,C). At each position (b,t), a C-dimensional vector summarizing token & position
--- inp is (B,T) of integers, holding the token ids at each (b,t) position
--- wte is (V,C) of token embeddings, short for "weight token embeddings"
+/--
+-- out: C-dimensional vector summarizing token & position
+-- inp: (B,T) of integers, holding the token ids at each (b,t) position
+-- wte: (V,C) of token embeddings, short for "weight token embeddings"
 -- wpe is (maxT,C) of position embeddings, short for "weight positional embedding"
 
--- Alok: remember dims read backward
-/-- accumulate over batches -/
+-- accumulate over batches -/
 def encoder_backward_batch
   (dout_b: Vector (Vector (Vector Float C) T) B)
   (inp_b: Vector (Vector (Fin V) T) B)
   (h: T ≤ maxT)
   -- gradient is accumulated, so no batch dim in output `dwte` or `dwpe`
-: ( Vector (Vector Float C) V) × ( Vector (Vector Float C) maxT)
+: Vector (Vector Float C) V × Vector (Vector Float C) maxT
 :=
   let all_data :=
     (dout_b.zip inp_b).map (λ (dout_b, inp_b) => encoder_backward dout_b inp_b h)
-  let dwte_b := (all_data.map Prod.fst)
-  let dwpe_b := (all_data.map Prod.snd)
-  let dwte := dwte_b.foldl Vector.add Vector.zero
-  let dwpe := dwpe_b.foldl Vector.add Vector.zero
+  let (dwte_b, dwpe_b) := (all_data.map Prod.fst, all_data.map Prod.snd)
+  let (dwte, dwpe) := (dwte_b.foldl Vector.add Vector.zero, dwpe_b.foldl Vector.add Vector.zero)
 
   (dwte, dwpe)

@@ -1,14 +1,16 @@
 import Mathlib.Init.ZeroOne
 
+/-- The base array type.-/
 structure Vector (α : Type u) (n: Nat) where
+  /--Underlying data-/
   data: Array α
-  -- a proof that the data.length = n
-  isEq: data.size = n
+  /-- a proof that the data.length = n -/
+  isEq: data.size = n := by rfl
 deriving Repr
 
 namespace Vector
 
-def proveLen {n:Nat} {n':Nat} (v:Vector α n) (h: v.data.size = n'): Vector α n' := {
+def proveLen {n n': Nat} (v:Vector α n) (h: v.data.size = n'): Vector α n' := {
   data := v.data,
   isEq := h
 }
@@ -149,20 +151,20 @@ def mapIdx {β : Type u} {n: Nat} (f: Fin n → α → β) (v: Vector α n) : Ve
   }
 
 
-def zero [Zero α] {n:Nat}: Vector α n := Vector.replicate n 0
+def zero [Zero α] {n : Nat} : Vector α n := Vector.replicate n 0
 
-def one [One α] {n:Nat}: Vector α n := Vector.replicate n 1
+def one [One α] {n : Nat} : Vector α n := Vector.replicate n 1
 
 def neg [Neg α] (v: Vector α n) : Vector α n := Vector.map (-·) v
 
 def add [Add α] (v1: Vector α n) (v2: Vector α n) : Vector α n :=
   Vector.zipWith (·+·) v1 v2
 
-def sub [Sub α] {n: Nat} (a b: Vector α n) : Vector α n :=
+def sub [Sub α] {n : Nat} (a b: Vector α n) : Vector α n :=
   zipWith (·-·) a b
 
 def scale [Mul α] {n: Nat} (k: α) (v: Vector α n) : Vector α n :=
-  v.map (fun x => k*x)
+  v.map (k * ·)
 
 def hadamard [Mul α] {n: Nat} (a b: Vector α n) : Vector α n :=
   zipWith (·*·) a b

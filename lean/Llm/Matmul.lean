@@ -41,16 +41,19 @@ import LinearAlgebra.Vector
 -- }
 
 
-def matmul {α : Type u} [Add α] [Mul α] [Zero α] {R C I: Nat} (a: Vector (Vector α I) R) (b: Vector (Vector α C) I) : Vector (Vector α C) R :=
+def matmul [Add α] [Mul α] [Zero α] (a: Vector (Vector α I) R) (b: Vector (Vector α C) I) : Vector (Vector α C) R :=
   let rows := a
   let cols := b.transpose
 
-  Vector.ofFn (fun r =>
-    Vector.ofFn (fun c =>
+  .ofFn fun r =>
+    .ofFn fun c =>
       rows[r].dot cols[c]
-    )
-  )
 
+/--Matrix multiplication.-/
+instance [Add α] [Mul α] [Zero α] : HMul (Vector (Vector α I) R) (Vector (Vector α C) I) (Vector (Vector α C) R) where
+  hMul := matmul
+
+#eval matmul !v[!v[1,2,3],!v[4,5,6]] !v[!v[7,8],!v[9,10],!v[11,12]]
 -- a: B x T x C
 -- b: B x C x OC
 -- out: B x T x OC
