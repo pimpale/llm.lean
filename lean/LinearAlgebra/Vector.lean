@@ -158,7 +158,7 @@ def one [One α] {n : Nat} : Vector α n := Vector.replicate n 1
 def neg [Neg α] (v: Vector α n) : Vector α n := Vector.map (-·) v
 
 def add [Add α] (v1: Vector α n) (v2: Vector α n) : Vector α n :=
-  Vector.zipWith (·+·) v1 v2
+  zipWith (·+·) v1 v2
 
 def sub [Sub α] {n : Nat} (a b: Vector α n) : Vector α n :=
   zipWith (·-·) a b
@@ -178,18 +178,17 @@ def dot [Add α] [Mul α] [Zero α] {n: Nat} (a b: Vector α n) : α :=
 #eval 11 = !v[1, 2].dot !v[3, 4]
 
 def transpose  (v: Vector (Vector α C) R) : Vector (Vector α R) C :=
-  Vector.ofFn (fun c => Vector.ofFn (fun r => v[r][c]))
-
+  ofFn fun c =>
+    ofFn fun r =>
+    v[r][c]
 
 def matmul [Add α] [Mul α] [Zero α] {R C I: Nat} (a: Vector (Vector α I) R) (b: Vector (Vector α C) I) : Vector (Vector α C) R :=  Id.run do
   let rows := a
   let cols := b.transpose
 
-  Vector.ofFn (fun r =>
-    Vector.ofFn (fun c =>
+  ofFn fun r =>
+    ofFn fun c =>
       rows[r].dot cols[c]
-    )
-  )
 
 -- Some theorems
 @[simp]
@@ -201,7 +200,6 @@ theorem getElem_data {α: Type u} {n: Nat} (v: Vector α n) (i: Fin n)
 theorem getElem_data' {α: Type u} {n: Nat} (v: Vector α n) (i: Nat) (h: i < n)
   : v[i] = v.data[i]'(lt_n_lt_data_size v ⟨i, h⟩)
   := rfl
-
 
 @[simp]
 theorem getElem_eq_get {α: Type u} {n: Nat} (v: Vector α n) (i: Nat) (h: i < n)
