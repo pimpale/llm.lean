@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "MLTable": "yaml",
+        "utils.h": "c",
+        "tokenizer.h": "c",
+        "dataloader.h": "c"
+    }
+}
