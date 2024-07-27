@@ -102,7 +102,6 @@ def pop {α: Type u} {n : Nat} (v: Vector α n) : Vector α (n - 1) :=  {
   isEq := Eq.trans (Array.size_pop v.data) (congrArg Nat.pred v.isEq)
 }
 
-
 @[inline]
 def truncateTR {α: Type u} {n : Nat} (v: Vector α n) (n': Nat) (h: n' ≤ n): Vector α n' :=
   if h1: n = n' then
@@ -176,6 +175,7 @@ def dot [Add α] [Mul α] [Zero α] {n: Nat} (a b: Vector α n) : α :=
 
 #eval 11 = !v[1, 2].dot !v[3, 4]
 
+/-- Swap rows and columns of a matrix-/
 def transpose  (v: Vector (Vector α C) R) : Vector (Vector α R) C :=
   ofFn fun c =>
     ofFn fun r =>
