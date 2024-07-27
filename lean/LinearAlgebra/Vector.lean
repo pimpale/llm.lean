@@ -424,6 +424,9 @@ instance [Mul α] {n: Nat} : HMul α (Vector α n) (Vector α n) where
 /-- scalar mul from the right is the same as scalar mul from the left-/
 instance [Mul α] {n: Nat} : HMul (Vector α n) α (Vector α n) where
   hMul v a := a * v
+/-- scalar div -/
+instance [Div α] {n: Nat} : HDiv (Vector α n) α (Vector α n) where
+  hDiv v a := v.map (· / a)
 
 /-- Matrix-vector multiplication -/
 instance [Add α] [Mul α] [Zero α] {R C: Nat} : HMul (Vector (Vector α C) R) (Vector α C) (Vector α R) where
