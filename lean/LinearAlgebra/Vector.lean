@@ -1,5 +1,4 @@
-import Mathlib.Init.ZeroOne
-
+import Mathlib.Algebra.Group.ZeroOne
 /-- The base array type.-/
 structure Vector (α : Type u) (n: Nat) where
   /--Underlying data-/
