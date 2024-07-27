@@ -7,6 +7,8 @@ structure Vector (α : Type u) (n: Nat) where
   isEq: data.size = n := by rfl
 deriving Repr
 
+instance [Repr α] : ToString (Vector α n) where
+  toString v := s!"{repr v}"
 namespace Vector
 
 def proveLen {n n': Nat} (v:Vector α n) (h: v.data.size = n'): Vector α n' := {
@@ -172,6 +174,10 @@ def sum [Add α] [Zero α] {n: Nat} (v: Vector α n) : α :=
 
 def dot [Add α] [Mul α] [Zero α] {n: Nat} (a b: Vector α n) : α :=
   sum (hadamard a b)
+
+
+
+
 
 #eval 11 = !v[1, 2].dot !v[3, 4]
 
@@ -397,12 +403,48 @@ theorem ext {α: Type u} {n: Nat} (v1 v2: Vector α n) (h : ∀ (i : Fin n), v1[
     v1_eq_v2
 
 
+/--Matrix multiplication.-/
+instance [Add α] [Mul α] [Zero α] : HMul (Vector (Vector α I) R) (Vector (Vector α C) I) (Vector (Vector α C) R) where
+  hMul := matmul
+
 instance : Inhabited (Vector α 0) where default := empty
 instance [Zero α] : Zero (Vector α n) where zero := zero
 instance [One α] : One (Vector α n) where one := one
 instance [Neg α] : Neg (Vector α n) where neg := neg
 instance [Add α] {n: Nat} : Add (Vector α n) where add := add
 instance [Sub α] {n: Nat} : Sub (Vector α n) where sub := sub
-instance [Mul α] {n: Nat} : Mul (Vector α n) where mul := hadamard
+-- instance [Mul α] {n: Nat} : Mul (Vector α n) where mul := hadamard
+/--a ⬝ b = scalar-/
+instance [Add α] [Mul α] [Zero α] {n: Nat} : HMul (Vector α n) (Vector α n) α where
+  hMul := dot
 
+/--scalar mul-/
+instance [Mul α] {n: Nat} : HMul α (Vector α n) (Vector α n) where
+  hMul a v := v.map (a * ·)
+/-- scalar mul from the right is the same as scalar mul from the left-/
+instance [Mul α] {n: Nat} : HMul (Vector α n) α (Vector α n) where
+  hMul v a := a * v
+
+/-- Matrix-vector multiplication -/
+instance [Add α] [Mul α] [Zero α] {R C: Nat} : HMul (Vector (Vector α C) R) (Vector α C) (Vector α R) where
+  hMul m v := ofFn fun r => m[r].dot v
+
+/-- Test case for 2x2 matrix-vector multiplication -/
+def testMatrixVectorMul : IO Unit := do
+  let mat : Vector (Vector Float 2) 2 := !v[!v[1, 2], !v[3, 4]]
+  let vec  : Vector Float 2 := !v[5, 6]
+  let result := mat * vec
+  IO.println s!"Matrix: {mat}"
+  IO.println s!"Vector: {vec}"
+  IO.println s!"Result: {result}"
+  -- Expected result: [17, 39]
+
+#eval testMatrixVectorMul
+
+
+-- TODO use mathlib and a typeclass
+def norm (v: Vector Float n) : Float := v.map (· ^ 2) |>.sum |>.sqrt
+
+def mean (v: Vector Float n) : Float :=
+  v.sum / n.toFloat
 end Vector
