@@ -1,7 +1,7 @@
 import Mathlib.Algebra.Group.ZeroOne
 /-- The base array type.-/
 structure Vector (α : Type u) (n: Nat) where
-  /--Underlying data-/
+  /-- Underlying data-/
   data: Array α
   /-- a proof that the data.length = n -/
   isEq: data.size = n := by rfl
@@ -38,7 +38,7 @@ def ofFn {n: Nat} (f: Fin n -> α) : Vector α n := {
   isEq := Array.size_ofFn f
 }
 
-def ofArray (a:Array α) : Vector α (a.size) := {
+def ofArray (a : Array α) : Vector α (a.size) := {
   data := a,
   isEq := rfl
 }
@@ -107,7 +107,7 @@ def pop {α: Type u} {n : Nat} (v: Vector α n) : Vector α (n - 1) :=  {
 @[inline]
 def truncateTR {α: Type u} {n : Nat} (v: Vector α n) (n': Nat) (h: n' ≤ n): Vector α n' :=
   if h1: n = n' then
-   v.proveLen (v.isEq.trans h1)
+    v.proveLen (v.isEq.trans h1)
   else
     have n'_ne_n := (Ne.intro h1).symm;
     have n'_lt_n := Nat.lt_of_le_of_ne h (n'_ne_n);
