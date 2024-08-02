@@ -2,8 +2,10 @@ import LinearAlgebra.Vector
 
 /-- finite difference approximation of the derivative of a function -/
 def finiteDiff (f : Vector Float n → Vector Float m) (x : Vector Float n) (ε := 1e-5) : Vector Float m :=
-  let dx := ε * x
-  (f (x + dx) - f x) / dx.norm
+/-- Coerce a scalar to a vector of length 1 -/
+instance : Coe a (Vector a 1) where
+  coe a := !v[a]
+
 
 -- Test case for x^2
 def square (x: Vector Float n) : Vector Float n := x.hadamard x
