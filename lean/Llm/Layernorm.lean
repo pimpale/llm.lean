@@ -1,4 +1,5 @@
 import LinearAlgebra.Vector
+import Llm.FiniteDiff
 
 
 abbrev EPS := 1e-5
@@ -9,7 +10,7 @@ def vec_sum [Add α] [Zero α] (v: Vector α N) : α :=
 def vec_mean (v: Vector Float N) : Float :=
   vec_sum v / N.toFloat
 
-def layernorm_forward
+def layernorm
   (inp: Vector Float C)
   (weight: Vector Float C)
   (bias: Vector Float C)
@@ -27,35 +28,20 @@ def layernorm_forward
 
   (meanVal, rstd, out)
 
-def layernorm_forward_batch
+def layernorm_batched
   (inp: Vector (Vector (Vector Float C) T) B)
   (weight: Vector Float C)
   (bias: Vector Float C)
   -- mean, rstd, out
 : ((Vector (Vector Float T) B) × (Vector (Vector Float T) B) ×   (Vector (Vector (Vector Float C) T) B))
   :=
-    let all_data := inp.map (λ inp => inp.map (λ inp => layernorm_forward inp weight bias))
+    let all_data := inp.map (λ inp => inp.map (λ inp => layernorm inp weight bias))
 
     let mean := all_data.map (λ row => row.map (λ (m, _, _) => m));
     let rstd := all_data.map (λ row => row.map (λ (_, s, _) => s));
     let out := all_data.map (λ row => row.map (λ (_, _, o) => o));
 
     (mean, rstd, out)
-
-
-    -- @staticmethod
-    -- def layernorm_backward(dout, cache):
-    --     x, w, mean, rstd = cache
-    --     # recompute the norm (save memory at the cost of compute)
-    --     norm = (x - mean) * rstd
-    --     # gradients for weights, bias
-    --     db = dout.sum((0, 1))
-    --     dw = (dout * norm).sum((0, 1))
-    --     # gradients for input
-    --     dnorm = dout * w
-    --     dx = dnorm - dnorm.mean(-1, keepdim=True) - norm * (dnorm * norm).mean(-1, keepdim=True)
-    --     dx *= rstd
-    --     return dx, dw, db
 
 
 def layernorm_backward
@@ -90,10 +76,26 @@ def layernorm_backward_batch
   -- dx, dw, db
 : (Vector (Vector (Vector Float C) T) B) × (Vector (Vector Float C) B) × (Vector (Vector Float C) B)
   :=
-  let all_data := Vector.ofFn (λ b: Fin B => Vector.ofFn λ t: Fin T => layernorm_backward dout[b][t] inp[b][t] mean[b][t] rstd[b][t] weight);
+  let all_data := Vector.ofFn (fun b => Vector.ofFn (fun t => layernorm_backward dout[b][t] inp[b][t] mean[b][t] rstd[b][t] weight))
 
-  let dx := all_data.map (λ row => row.map (λ (dx, _, _) => dx));
-  let dw := all_data.map (λ row => vec_sum <| row.map (λ (_, dw, _) => dw));
-  let db := all_data.map (λ row => vec_sum <| row.map (λ (_, _, db) => db));
+  let dx := all_data.map (fun row => row.map (fun (dx, _, _) => dx));
+  let dw := all_data.map (fun row => vec_sum <| row.map (fun (_, dw, _) => dw));
+  let db := all_data.map (fun row => vec_sum <| row.map (fun (_, _, db) => db));
 
   (dx, dw, db)
+
+
+
+
+def test_layernorm_backward_finiteDiff (ε : Float := 1e-4) (tolerance : Float := 1e-3) : IO Unit := do
+
+  let inp := !v[1.0, 2.0, 3.0, 4.0]
+  let weight := !v[0.1, 0.2, 0.3, 0.4]
+  let bias := !v[0.01, 0.02, 0.03, 0.04]
+  let dout := !v[0.1, 0.2, 0.3, 0.4]
+
+  let (mean, rstd, out) := layernorm inp weight bias
+  let (dx, dw, db) := layernorm_backward dout inp mean rstd weight
+  IO.println s!"{dx}, {dw}, {db}"
+
+#eval test_layernorm_backward_finiteDiff
