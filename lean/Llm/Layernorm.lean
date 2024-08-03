@@ -16,16 +16,16 @@ def layernorm_forward
 : Float × Float × (Vector Float C)
   :=
   -- calculate the mean
-  let mean := vec_mean inp;
+  let meanVal := vec_mean inp
   -- calculate the variance (without any bias correction)
-  let xshift := inp - Vector.replicate C mean;
-  let variance := vec_mean (Vector.hadamard xshift xshift);
+  let xshift := inp - Vector.replicate C meanVal  ;
+  let variance := vec_mean (Vector.hadamard xshift  xshift)
   -- calculate the rstd (reciprocal standard deviation)
   let rstd := 1 / (variance + EPS).sqrt;
   -- normalize, scale, and shift
-  let out := inp.mapIdx (λ i x => (rstd * (x - mean)) * weight.get i + bias.get i);
+  let out := inp.mapIdx (λ c x => (rstd * (x - meanVal)) * weight[c] + bias[c]);
 
-  (mean, rstd, out)
+  (meanVal, rstd, out)
 
 def layernorm_forward_batch
   (inp: Vector (Vector (Vector Float C) T) B)
@@ -58,7 +58,6 @@ def layernorm_forward_batch
     --     return dx, dw, db
 
 
-
 def layernorm_backward
   (dout: Vector Float C)
   (inp: Vector Float C)
@@ -69,16 +68,16 @@ def layernorm_backward
 : (Vector Float C) × (Vector Float C) × (Vector Float C)
   :=
   -- recomputing the norm
-  let norm := (inp - Vector.replicate C mean) * Vector.replicate C rstd;
+  let norm' := (inp - Vector.replicate C mean).hadamard (Vector.replicate C rstd)
   -- gradients for weights, bias
   let db := dout
-  let dw := (Vector.hadamard dout norm)
+  let dw :=  dout.hadamard norm'
   -- gradients for input
-  let dnorm := dout * weight;
-  let dnorm_mean := Vector.replicate C (vec_mean dnorm);
-  let dnorm_norm_mean := Vector.replicate C (vec_mean (Vector.hadamard dnorm norm));
-  let dx := dnorm - dnorm_mean - norm * dnorm_norm_mean;
-  let dx := dx * Vector.replicate C rstd;
+  let dnorm := Vector.hadamard dout weight
+  let dnorm_mean := Vector.replicate C (vec_mean dnorm)
+  let dnorm_norm_mean := Vector.replicate C (vec_mean (dnorm.hadamard norm'))
+  let dx := dnorm - dnorm_mean - (norm'.hadamard dnorm_norm_mean)
+  let dx := dx.hadamard (Vector.replicate C rstd)
 
   (dx, dw, db)
 
