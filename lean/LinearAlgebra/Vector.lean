@@ -5,7 +5,7 @@ structure Vector (α : Type u) (n: Nat) where
   data: Array α
   /-- a proof that the data.length = n -/
   isEq: data.size = n := by rfl
-deriving Repr
+deriving Repr, Hashable
 
 instance [Repr α] : ToString (Vector α n) where
   toString v := s!"{repr v}"
@@ -139,6 +139,13 @@ def map {β : Type u} {n: Nat} (f: α → β) (v: Vector α n) : Vector β n := 
   data := v.data.map f,
   isEq := Eq.trans (v.data.size_map f) v.isEq
 }
+
+instance : Functor (Vector · n) where
+  map f xs := xs.map f
+
+-- Not a monad or applicative functor because of the fixed length constraint.
+instance : Pure (Vector · n) where
+  pure x := Vector.replicate n x
 
 @[inline]
 def mapIdx {β : Type u} {n: Nat} (f: Fin n → α → β) (v: Vector α n) : Vector β n :=
