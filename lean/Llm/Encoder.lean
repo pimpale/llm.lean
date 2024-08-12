@@ -50,13 +50,15 @@ def encoder_backward
 
   (dwte, dwpe)
 
-/--
--- out: C-dimensional vector summarizing token & position
--- inp: (B,T) of integers, holding the token ids at each (b,t) position
--- wte: (V,C) of token embeddings, short for "weight token embeddings"
--- wpe is (maxT,C) of position embeddings, short for "weight positional embedding"
 
--- accumulate over batches -/
+/--
+ out: C-dimensional vector summarizing token & position
+ inp: (B,T) of integers, holding the token ids at each (b,t) position
+ wte: (V,C) of token embeddings, short for "weight token embeddings"
+ wpe is (maxT,C) of position embeddings, short for "weight positional embedding"
+ --/
+
+
 def encoder_backward_batch
   (dout_b: Vector (Vector (Vector Float C) T) B)
   (inp_b: Vector (Vector (Fin V) T) B)
@@ -67,6 +69,7 @@ def encoder_backward_batch
   let all_data :=
     (dout_b.zip inp_b).map (λ (dout_b, inp_b) => encoder_backward dout_b inp_b h)
   let (dwte_b, dwpe_b) := (all_data.map Prod.fst, all_data.map Prod.snd)
+  -- accumulate over batches
   let (dwte, dwpe) := (dwte_b.foldl Vector.add Vector.zero, dwpe_b.foldl Vector.add Vector.zero)
 
   (dwte, dwpe)
