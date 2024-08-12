@@ -1,3 +1,7 @@
-def relu (x : Float):Float:=if x ≥ 0 then x else 0
+import Mathlib.Algebra.Group.Basic
 
-def relu_backward (x dx: Float) : Float := if x ≥ 0 then dx else 0
+def relu [Max α] [Zero α] (x : α) : α := max x 0
+
+
+def relu_backward [BEq α] [Max α] [Zero α] (x dx: α) : α :=
+  if relu x == 0 then 0 else dx
