@@ -44,7 +44,7 @@ def ofArray (a : Array α) : Vector α (a.size) := {
 }
 
 @[inline]
-def ofList (l:List α) : Vector α (l.length) := {
+def ofList (l : List α) : Vector α (l.length) := {
   data := Array.mk l,
   isEq := Array.size_mk l
 }
@@ -78,15 +78,15 @@ instance : GetElem (Vector α n) Nat α (fun _ i => i < n) where
 @[inline]
 def set (v: Vector α n) (i : Fin n) (a : α) : Vector α n :=
   -- prove that i ≤ v.data.length
-  let i := Fin.mk i.val (Nat.lt_of_lt_of_eq i.isLt (Eq.symm v.isEq));
+  let i := Fin.mk i.val (Nat.lt_of_lt_of_eq i.isLt (Eq.symm v.isEq))
   {
-    data := Array.set v.data i a,
-    isEq := Eq.trans (Array.size_set v.data i a) v.isEq
+    data := v.data.set i a,
+    isEq := Eq.trans (v.data.size_set i a) v.isEq
   }
 
 @[inline]
 def foldl {α β: Type u} {n: Nat} (f: β → α → β) (init: β) (v: Vector α n) : β :=
-  Array.foldl f init v.data
+  v.data.foldl f init
 
 @[inline]
 def modify (i: Fin n) (f: α → α) (v: Vector α n) : Vector α n :=
@@ -94,14 +94,14 @@ def modify (i: Fin n) (f: α → α) (v: Vector α n) : Vector α n :=
 
 @[inline]
 def push (v: Vector α n) (a : α) : Vector α (n + 1) :=  {
-  data := Array.push v.data a,
-  isEq := Eq.trans (Array.size_push v.data a) (congrArg Nat.succ v.isEq)
+  data := v.data.push a,
+  isEq := Eq.trans (v.data.size_push a) (congrArg Nat.succ v.isEq)
 }
 
 @[inline]
 def pop {α: Type u} {n : Nat} (v: Vector α n) : Vector α (n - 1) :=  {
-  data := Array.pop v.data,
-  isEq := Eq.trans (Array.size_pop v.data) (congrArg Nat.pred v.isEq)
+  data := v.data.pop,
+  isEq := Eq.trans (v.data.size_pop) (congrArg Nat.pred v.isEq)
 }
 
 @[inline]
@@ -109,53 +109,51 @@ def truncateTR {α: Type u} {n : Nat} (v: Vector α n) (n': Nat) (h: n' ≤ n): 
   if h1: n = n' then
     v.proveLen (v.isEq.trans h1)
   else
-    have n'_ne_n := (Ne.intro h1).symm;
-    have n'_lt_n := Nat.lt_of_le_of_ne h (n'_ne_n);
-    have n'_succ_le_n := Nat.succ_le_of_lt n'_lt_n;
+    have n'_ne_n := (Ne.intro h1).symm
+    have n'_lt_n := Nat.lt_of_le_of_ne h (n'_ne_n)
+    have n'_succ_le_n := Nat.succ_le_of_lt n'_lt_n
     v.pop.truncateTR n' (Nat.pred_le_pred n'_succ_le_n)
 
 @[inline]
 def truncate {α: Type u} {n : Nat} (v: Vector α n) (n': Nat) (h: n' ≤ n): Vector α n' :=
-  Vector.ofFn (fun i => v[i])
+  .ofFn (v[·])
 
 @[specialize]
-def zipWithAux {α β γ:Type u} {i n:Nat} (f : α → β → γ) (as : Vector α n) (bs : Vector β n) (acc : Vector γ i) (h : i ≤ n) : Vector γ n :=
+def zipWithAux {i n:Nat} (f : a → b → c) (as : Vector a n) (bs : Vector b n) (acc : Vector c i) (h : i ≤ n) : Vector c n :=
   if h1: i = n then
     acc.proveLen (acc.isEq.trans h1)
   else
     -- we have to use letI in order to not have to deal with let fns in the proof when we unfold
     letI h2: i < n := Nat.lt_of_le_of_ne h h1
-    letI a := as[i]'h2;
-    letI b := bs[i]'h2;
-    zipWithAux f as bs (acc.push (f a b)) h2
+    zipWithAux f as bs (acc.push (f as[i] bs[i])) h2
 
 @[inline]
 def zipWith {β : Type u} {γ : Type u} {n: Nat} (f: α → β → γ) (v1: Vector α n) (v2: Vector β n): Vector γ n :=
   zipWithAux f v1 v2 ⟨Array.mkEmpty n, rfl⟩ (by simp)
 
 def zip {β : Type u} {n: Nat} (v1: Vector α n) (v2: Vector β n): Vector (α × β) n :=
-  zipWith Prod.mk v1 v2
+  zipWith (·, ·) v1 v2
 
 @[inline]
 def map {β : Type u} {n: Nat} (f: α → β) (v: Vector α n) : Vector β n := {
-  data := Array.map f v.data,
-  isEq := Eq.trans (Array.size_map f v.data) v.isEq
+  data := v.data.map f,
+  isEq := Eq.trans (v.data.size_map f) v.isEq
 }
 
 @[inline]
 def mapIdx {β : Type u} {n: Nat} (f: Fin n → α → β) (v: Vector α n) : Vector β n :=
-  letI f' := fun (i: Fin v.data.size) => f (Fin.mk i.val (Nat.lt_of_lt_of_eq i.isLt v.isEq));
+  letI f' := fun (i: Fin v.data.size) => f (Fin.mk i.val (Nat.lt_of_lt_of_eq i.isLt v.isEq))
   {
     data := Array.mapIdx v.data f',
     isEq := Eq.trans (Array.size_mapIdx v.data f') v.isEq
   }
 
 
-def zero [Zero α] {n : Nat} : Vector α n := Vector.replicate n 0
+def zero [Zero α] {n : Nat} : Vector α n := replicate n 0
 
-def one [One α] {n : Nat} : Vector α n := Vector.replicate n 1
+def one [One α] {n : Nat} : Vector α n := replicate n 1
 
-def neg [Neg α] (v: Vector α n) : Vector α n := Vector.map (-·) v
+def neg [Neg α] (v: Vector α n) : Vector α n := v.map (-·)
 
 def add [Add α] (v1: Vector α n) (v2: Vector α n) : Vector α n :=
   zipWith (·+·) v1 v2
@@ -170,16 +168,20 @@ def hadamard [Mul α] {n: Nat} (a b: Vector α n) : Vector α n :=
   zipWith (·*·) a b
 
 def sum [Add α] [Zero α] {n: Nat} (v: Vector α n) : α :=
-  foldl (·+·) 0 v
+  v.foldl (· + ·) 0
 
 def dot [Add α] [Mul α] [Zero α] {n: Nat} (a b: Vector α n) : α :=
   sum (hadamard a b)
 
-
+/-- Dot product. The ᵥ is for "vector" -/
+infix:25 " ⬝ᵥ " => dot
+/-- Hadamard product. Elementwise multiplication. -/
+infix:25 " ⊙ " => hadamard
 
 
 
 #eval 11 = !v[1, 2].dot !v[3, 4]
+#eval !v[1, 2] ⊙ !v[3, 4]
 
 /-- Swap rows and columns of a matrix-/
 def transpose  (v: Vector (Vector α C) R) : Vector (Vector α R) C :=
@@ -193,7 +195,7 @@ def matmul [Add α] [Mul α] [Zero α] {R C I: Nat} (a: Vector (Vector α I) R) 
 
   ofFn fun r =>
     ofFn fun c =>
-      rows[r].dot cols[c]
+      rows[r] ⬝ᵥ cols[c]
 
 -- Some theorems
 @[simp]
@@ -317,8 +319,8 @@ theorem get_zipWithAux
       unfold zipWithAux
       split
       case isTrue =>
-       rename _ => h1
-       exact hacc ⟨k.val, (Nat.lt_of_lt_of_eq k.isLt h1.symm)⟩
+        rename _ => h1
+        exact hacc ⟨k.val, (Nat.lt_of_lt_of_eq k.isLt h1.symm)⟩
       case isFalse =>
         rename _ => h1
         have hin_next: i + 1 ≤ n := Nat.succ_le_of_lt (Nat.lt_of_le_of_ne hin h1)
@@ -386,7 +388,7 @@ theorem ext {α: Type u} {n: Nat} (v1 v2: Vector α n) (h : ∀ (i : Fin n), v1[
     -- prove that for all i < v1.data.size, v1.data.get i = v2.data.get i
     have forall_i_hi_v1_i_v2_i
       : ∀ (i : Nat) (h1: i < v1.data.size) (h2: i < v2.data.size), v1.data[i] = v2.data[i]
-      := fun i h1 _ => h ⟨i, lt_data_size_lt_n v1 h1⟩;
+      := fun i h1 _ => h ⟨i, lt_data_size_lt_n v1 h1⟩
     -- prove that v1.data = v2.data
     have v1_data_eq_v2_data :v1.data = v2.data :=
         Array.ext
@@ -413,10 +415,7 @@ instance [One α] : One (Vector α n) where one := one
 instance [Neg α] : Neg (Vector α n) where neg := neg
 instance [Add α] {n: Nat} : Add (Vector α n) where add := add
 instance [Sub α] {n: Nat} : Sub (Vector α n) where sub := sub
--- instance [Mul α] {n: Nat} : Mul (Vector α n) where mul := hadamard
-/--a ⬝ b = scalar-/
-instance [Add α] [Mul α] [Zero α] {n: Nat} : HMul (Vector α n) (Vector α n) α where
-  hMul := dot
+
 
 /--scalar mul-/
 instance [Mul α] {n: Nat} : HMul α (Vector α n) (Vector α n) where
@@ -430,7 +429,7 @@ instance [Div α] {n: Nat} : HDiv (Vector α n) α (Vector α n) where
 
 /-- Matrix-vector multiplication -/
 instance [Add α] [Mul α] [Zero α] {R C: Nat} : HMul (Vector (Vector α C) R) (Vector α C) (Vector α R) where
-  hMul m v := ofFn fun r => m[r].dot v
+  hMul m v := ofFn fun r => m[r] ⬝ᵥ v
 
 /-- Test case for 2x2 matrix-vector multiplication -/
 def testMatrixVectorMul : IO Unit := do

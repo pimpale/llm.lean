@@ -10,13 +10,12 @@ def tril [Zero α] (triangle_value: α) : Vector (Vector α n) n :=
   )
 
 def attention_forward
-  (q: Vector (Vector Float D_K) T)
-  (k: Vector (Vector Float D_K) T)
-  (v: Vector (Vector Float D_K) T)
-: Vector (Vector Float D_K) T :=
-  let k_t := k.transpose
-  let a := q * k_t
-  let norm_factor :=  (Float.ofNat D_K).sqrt
+  (q: Vector (Vector Float Dₖ) T)
+  (k: Vector (Vector Float Dₖ) T)
+  (v: Vector (Vector Float Dₖ) T)
+: Vector (Vector Float Dₖ) T :=
+  let a := q * k.transpose
+  let norm_factor :=  (Float.ofNat Dₖ).sqrt
   let a1 := a.map (λ x => x.map (λ y => y / norm_factor))
   let a2 := a1 + tril (-Float.inf)
   let a3 := a2.map softmax
@@ -24,18 +23,17 @@ def attention_forward
   a3 * v
 
 def attention_backwards
-  (dout: Vector (Vector Float D_K) T)
-  (q: Vector (Vector Float D_K) T)
-  (k: Vector (Vector Float D_K) T)
-  (v: Vector (Vector Float D_K) T)
+  (dout: Vector (Vector Float Dₖ) T)
+  (q: Vector (Vector Float Dₖ) T)
+  (k: Vector (Vector Float Dₖ) T)
+  (v: Vector (Vector Float Dₖ) T)
 -- dq, dk, dv
-: (Vector (Vector Float D_K) T) × (Vector (Vector Float D_K) T) × (Vector (Vector Float D_K) T) :=
-  let k_t := k.transpose
-  let a := q * k_t
-  let norm_factor :=  1 / (Float.ofNat D_K).sqrt
+: (Vector (Vector Float Dₖ) T) × (Vector (Vector Float Dₖ) T) × (Vector (Vector Float Dₖ) T) :=
+  let a := q * k.transpose
+  let norm_factor :=  1 / (Float.ofNat Dₖ).sqrt
   let a1 := a.map (λ x => x.map (λ y => y * norm_factor))
   let a2 := a1 + tril (-Float.inf)
-  let a3 : Vector (Vector Float T) T := a2.map softmax
+  let a3 := a2.map softmax
 
 
   let dv := a3.transpose * dout

@@ -22,7 +22,7 @@ def softmax_backward
   let dout_m := (Vector.singleton dout)
 
   -- compute vector jacobian product (vT * J)
-  let vjp := dout_m * S;
+  let vjp := dout_m * S
 
   -- return the result (as vector)
   vjp[0]
@@ -30,6 +30,5 @@ def softmax_backward
 #eval finiteDiff softmax !v[1, 2, 3]
 
 #eval softmax !v[1, 2, 3]
-
 
 #eval softmax_backward !v[1,2,3] (softmax !v[1,2,3])

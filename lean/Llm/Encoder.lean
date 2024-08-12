@@ -30,33 +30,31 @@ def encoder_backward
   (dout: Vector (Vector Float C) T)
   (inp: Vector (Fin V) T)
   (h: T ≤ maxT)
-: (Vector (Vector Float C) V) × (Vector (Vector Float C) maxT)
-:=
-  let dwte_updater := λ
-    (dwte: Vector (Vector Float C) V)
-    ((d: Vector Float C), (ix: Fin V))
-  => dwte.modify ix (λ v => v + d)
+: Vector (Vector Float C) V × Vector (Vector Float C) maxT :=
 
-  let init_dwte := Vector.replicate V (Vector.replicate C 0)
-  let dwte := Vector.foldl dwte_updater init_dwte (Vector.zip dout inp)
+  let dwte_updater := fun
+    (dwte : Vector (Vector Float C) V)
+    ((d : Vector Float C), (ix : Fin V))
+  => dwte.modify ix (· + d)
 
-  let dwpe_updater := λ
-    (dwpe: Vector (Vector Float C) maxT)
-    ((t: Fin T),(d: Vector Float C))
-  => dwpe.modify (finMaxT_of_finT h t) (λ v => v + d)
+  let dwpe_updater := fun
+    (dwpe : Vector (Vector Float C) maxT)
+    ((t : Fin T), (d : Vector Float C))
+  => dwpe.modify (finMaxT_of_finT h t) (· + d)
 
-  let init_dwpe := .replicate maxT (.replicate C 0.0)
-  let dwpe := Vector.foldl dwpe_updater init_dwpe (Vector.mapIdx Prod.mk dout)
+  let dwte := (dout.zip inp).foldl dwte_updater (init := 0)
+
+  let dwpe := (dout.mapIdx (·, ·)).foldl dwpe_updater (init := 0)
 
   (dwte, dwpe)
 
 
 /--
- out: C-dimensional vector summarizing token & position
- inp: (B,T) of integers, holding the token ids at each (b,t) position
- wte: (V,C) of token embeddings, short for "weight token embeddings"
- wpe is (maxT,C) of position embeddings, short for "weight positional embedding"
- --/
+  out: C-dimensional vector summarizing token & position
+  inp: (B,T) of integers, holding the token ids at each (b,t) position
+  wte: (V,C) of token embeddings, short for "weight token embeddings"
+  wpe is (maxT,C) of position embeddings, short for "weight positional embedding"
+--/
 
 
 def encoder_backward_batch
@@ -70,6 +68,6 @@ def encoder_backward_batch
     (dout_b.zip inp_b).map (λ (dout_b, inp_b) => encoder_backward dout_b inp_b h)
   let (dwte_b, dwpe_b) := (all_data.map Prod.fst, all_data.map Prod.snd)
   -- accumulate over batches
-  let (dwte, dwpe) := (dwte_b.foldl Vector.add Vector.zero, dwpe_b.foldl Vector.add Vector.zero)
+  let (dwte, dwpe) := (dwte_b.sum, dwpe_b.sum)
 
   (dwte, dwpe)

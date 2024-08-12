@@ -34,8 +34,8 @@ def matmul_backward
 : (Vector (Vector Float N) P) × (Vector (Vector Float P) M)
 :=
 
-  let dinp := weight.transpose.matmul dout
-  let dweight := dout.matmul inp.transpose
+  let dinp := weight.transpose * dout
+  let dweight := dout * inp.transpose
 
   (dinp, dweight)
 
@@ -54,6 +54,6 @@ def matmul_backward_batched
   let dinp_b := matmul_batched weight_t dout
   let dweight_b := matmul_batched dout inp_t
 
-  let dweight := dweight_b.foldl (· + ·) 0
+  let dweight := dweight_b.sum
 
   (dinp_b, dweight)

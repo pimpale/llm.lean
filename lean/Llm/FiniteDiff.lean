@@ -11,9 +11,7 @@ instance : Coe a (Vector a 1) where
   coe a := !v[a]
 
 #eval ((2.0:Float) : Vector Float 1)
-#eval finiteDiff (f:=fun x => (x*x : Vector Float 1)) (x:= !v[1,2,3])
-
-#eval finiteDiff (f:=fun x => (x*x*x : Vector Float 1)) (x:= !v[2])
+#eval finiteDiff (f:=fun x => (x.dot x : Vector Float 1)) (x:= !v[1,2,3])
 
 -- Test case for x^2
 def square (x: Vector Float n) : Vector Float n := x.hadamard x
