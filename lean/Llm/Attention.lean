@@ -2,7 +2,7 @@ import LinearAlgebra.Vector
 import Llm.Matmul
 import Llm.Softmax
 
-def tril [Zero α] (fillValue: α) : Vector (Vector α R) C :=
+def tril [Zero α] (fillValue: α) : Vector C (Vector R α)  :=
   Vector.ofFn (fun c =>
     Vector.ofFn (fun r =>
       -- no ≤ to avoid diagonal. this should take an axis argument.
@@ -11,10 +11,8 @@ def tril [Zero α] (fillValue: α) : Vector (Vector α R) C :=
   )
 
 def attention_forward
-  (q: Vector (Vector Float Dₖ) T)
-  (k: Vector (Vector Float Dₖ) T)
-  (v: Vector (Vector Float Dₖ) T)
-: Vector (Vector Float Dₖ) T :=
+  (q k v : Vector T (Vector Dₖ Float))
+: Vector T (Vector Dₖ Float) :=
   let a := q * k.transpose
   let norm_factor :=  (Float.ofNat Dₖ).sqrt
   let a1 := a.map (λ x => x.map (λ y => y / norm_factor))
@@ -24,12 +22,9 @@ def attention_forward
   a3 * v
 
 def attention_backwards
-  (dout: Vector (Vector Float Dₖ) T)
-  (q: Vector (Vector Float Dₖ) T)
-  (k: Vector (Vector Float Dₖ) T)
-  (v: Vector (Vector Float Dₖ) T)
+  (dout q k v: Vector T (Vector Dₖ Float))
 -- dq, dk, dv
-: (Vector (Vector Float Dₖ) T) × (Vector (Vector Float Dₖ) T) × (Vector (Vector Float Dₖ) T) :=
+: (Vector T (Vector  Dₖ Float)) × (Vector T (Vector  Dₖ Float) ) × (Vector T (Vector  Dₖ Float) ) :=
   let a := q * k.transpose
   let norm_factor :=  1 / (Float.ofNat Dₖ).sqrt
   let a1 := a.map (λ x => x.map (λ y => y * norm_factor))

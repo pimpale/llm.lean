@@ -1,20 +1,20 @@
 import LinearAlgebra.Vector
 
 /-- centered finite difference approximation of the derivative of a function -/
-def finiteDiff (f : Vector Float n → Vector Float m) (x : Vector Float n) (ε := 1e-6) : Vector Float m :=
+def finiteDiff (f : Vector n Float → Vector m Float) (x : Vector n Float) (ε := 1e-6) : Vector m Float :=
   let dx := ε * x
 
   (f (x + dx) - f (x - dx)) / (2*dx.norm)
 
 /-- Coerce a scalar to a vector of length 1 -/
-instance : Coe a (Vector a 1) where
+instance : Coe a (Vector 1 a) where
   coe a := !v[a]
 
-#eval ((2.0:Float) : Vector Float 1)
-#eval finiteDiff (f:=fun x => (x.dot x : Vector Float 1)) (x:= !v[1,2,3])
+#eval ((2.0:Float) : Vector 1 Float)
+#eval finiteDiff (f:=fun x => (x.dot x : Vector 1 Float)) (x:= !v[1,2,3])
 
 -- Test case for x^2
-def square (x: Vector Float n) : Vector Float n := x.hadamard x
+def square (x: Vector n Float) : Vector n Float := x.hadamard x
 #eval square (Vector.replicate 5 2.0)
 
 def test_finiteDiff_square (n : Nat) : Bool := Id.run do
