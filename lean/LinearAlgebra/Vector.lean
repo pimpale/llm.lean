@@ -134,8 +134,6 @@ def zipWith {β : Type u} {γ : Type u} {n: Nat} (f: α → β → γ) (v1: Vect
 def zip {β : Type u} {n: Nat} (v1: Vector n α) (v2: Vector n β): Vector n (α × β)  :=
   zipWith (·, ·) v1 v2
 
-
-
 @[inline]
 def map {β : Type u} {n: Nat} (f: α → β) (v: Vector n α) : Vector n β  := {
   data := v.data.map f,
@@ -458,6 +456,46 @@ def testMatrixVectorMul : IO Unit := do
 
 #eval testMatrixVectorMul
 
+
+-- TODO finish
+-- instance : HAppend (Vector n α) (Vector m α) (Vector (n+m) α ) where
+--   hAppend v1 v2 := Id.run do
+--     let mut out := v1
+--     for v in v2 do
+--       out := out.push v
+
+--     out
+
+
+/-- stack along first-/
+def stack (vecs: Vector n (Vector m α)) : Vector (n*m) α :=
+  {
+    data := vecs.foldl (λ a b => Array.append a b.data) Array.empty,
+    isEq := by
+      sorry
+  }
+
+/-- Unstack-/
+def split {α : Type u} {R C : Nat} (tosplit: Vector (R * C) α) : Vector R (Vector C α) :=
+    ofFn fun r =>
+      ofFn fun c =>
+        tosplit[r * C + c]'sorry
+
+
+#eval do
+  -- Test case for stack
+  let v1 := !v[1, 2]
+  let v2 := !v[3, 4]
+  let v3 := !v[5, 6]
+  let stacked := Vector.stack !v[v1, v2, v3]
+  IO.println s!"Stacked vector: {stacked}"
+  -- Expected result: [1, 2, 3, 4, 5, 6]
+
+  -- Test case for split
+  let tosplit := !v[1, 2, 3, 4, 5, 6]
+  let split : Vector 2 (Vector 3 Float) := Vector.split tosplit
+  IO.println s!"Split vectors: {split}"
+  -- Expected result: [[1, 2, 3], 4], [5, 6]]
 
 -- TODO use mathlib and a typeclass
 def norm (v: Vector n Float) : Float := v.map (· ^ 2) |>.sum |>.sqrt

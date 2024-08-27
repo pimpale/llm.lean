@@ -70,8 +70,8 @@ def AttentionHead.backward_batched
 :=
   let backward_results := (inp.zip dout).map (fun (inp_i, dout_i) => self.backward inp_i dout_i)
 
-  let att_gradients := backward_results.map (·.fst)
-  let dinps := backward_results.map (·.snd)
+  let (att_gradients, dinps) := backward_results.unzip
+
 
   let att_gradients_sum := AttentionHead.sum_gradients att_gradients
 
