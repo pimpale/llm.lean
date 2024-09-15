@@ -22,6 +22,14 @@ def empty : Vector 0 α := {
   isEq := List.length_nil
 }
 
+def max (v: Vector n Int) : Option Int  := Id.run do
+  let mut max := v.data[0]!
+  for _i_in_range: i in [1: n] do
+    if v.data[i]! > max then
+      max := v.data[i]!
+  return max
+
+
 @[inline]
 def replicate (n: Nat) (x: α) : Vector n α := {
     data := Array.mkArray n x,
@@ -202,13 +210,15 @@ def transpose  (v: Vector R (Vector C α )) : Vector C (Vector R α ) :=
     ofFn fun r =>
     v[r][c]
 
-def matmul [Add α] [Mul α] [Zero α] {R C I: Nat} (a: Vector R (Vector  I α)) (b: Vector I (Vector  C α )) : Vector R (Vector C α )  :=  Id.run do
+-- TODO weaken to semiring
+def matmul [Add α] [Mul α] [Zero α] (a: Vector R (Vector  I α)) (b: Vector I (Vector  C α )) : Vector R (Vector C α )  :=  Id.run do
   let rows := a
   let cols := b.transpose
 
   ofFn fun r =>
     ofFn fun c =>
       rows[r] ⬝ᵥ cols[c]
+
 
 -- Some theorems
 @[simp]
