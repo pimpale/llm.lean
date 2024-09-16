@@ -546,6 +546,7 @@ def split {α : Type u} {R C : Nat} (tosplit: Vector (R * C) α) : Vector R (Vec
 -- TODO use mathlib and a typeclass
 def norm (v: Vector n Float) : Float := v.map (· ^ 2) |>.sum |>.sqrt
 
-def mean (v: Vector n Float) : Float :=
-  v.sum / n.toFloat
+
+def mean (v: Vector n Float) : Float := v.sum / n.toFloat
+
 end Vector

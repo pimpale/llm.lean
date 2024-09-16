@@ -3,10 +3,10 @@ open System Lake DSL
 
 package llm.lean where
   srcDir := "lean"
-  -- moreLinkArgs := #[
-  --   "-L./.lake/packages/LeanCopilot/.lake/build/lib",
-  --   "-lctranslate2"
-  -- ]
+  moreLinkArgs := #[
+    "-L./.lake/packages/LeanCopilot/.lake/build/lib",
+    "-lctranslate2"
+  ]
 
 lean_lib LinearAlgebra
 lean_lib Llm
