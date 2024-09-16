@@ -460,15 +460,6 @@ def testMatrixVectorMul : IO Unit := do
 #eval testMatrixVectorMul
 
 
--- TODO finish
--- instance : HAppend (Vector n α) (Vector m α) (Vector (n+m) α ) where
---   hAppend v1 v2 := Id.run do
---     let mut out := v1
---     for v in v2 do
---       out := out.push v
-
---     out
-
 
 def append (v1: Vector n α) (v2: Vector m α) : Vector (n+m) α :=
   {
