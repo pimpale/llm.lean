@@ -1,4 +1,6 @@
 import Mathlib.Algebra.Group.ZeroOne
+import Mathlib.Tactic.Ring
+
 /-- The base array type.-/
 structure Vector (n: Nat) (α : Type u)  where
   /-- Underlying data-/
@@ -440,6 +442,7 @@ instance [Mul α] {n: Nat} : HMul (Vector n α) α (Vector n α) where
 instance [Div α] {n: Nat} : HDiv (Vector n α) α (Vector n α) where
   hDiv v a := v.map (· / a)
 
+set_option linter.longLine false in
 /-- Matrix-vector multiplication -/
 instance [Add α] [Mul α] [Zero α] {R C: Nat} : HMul (Vector R (Vector C α)) (Vector C α) (Vector R α) where
   hMul m v := ofFn fun r => m[r] ⬝ᵥ v
@@ -467,19 +470,61 @@ def testMatrixVectorMul : IO Unit := do
 --     out
 
 
-/-- stack along first-/
-def stack (vecs: Vector n (Vector m α)) : Vector (n*m) α :=
+def append (v1: Vector n α) (v2: Vector m α) : Vector (n+m) α :=
   {
-    data := vecs.foldl (λ a b => Array.append a b.data) Array.empty,
+    data := v1.data.append v2.data,
     isEq := by
-      sorry
+      simp [Array.size_append, v1.isEq, v2.isEq]
   }
+
+def stack (vecs: Vector R (Vector C α)) : Vector (R * C) α :=
+  if h: R = 0 then
+    {
+      data := Array.empty,
+      isEq := by
+        simp [h]
+        exact Array.empty_data
+    }
+  else
+    let last := vecs[R-1]
+    let first := stack vecs.pop
+    let q := append first last
+
+    {
+      data := q.data,
+      isEq := by
+        simp [q.isEq, Nat.mul_sub_right_distrib]
+        apply Nat.sub_add_cancel
+        -- we need to show that  m ≤ n * m
+        conv =>
+          lhs
+          rw [← Nat.one_mul C]
+        apply Nat.mul_le_mul_right C
+        -- we need to show that 1 ≤ n
+        exact Nat.succ_le_of_lt (Nat.pos_of_ne_zero h)
+    }
+
+
+
+def splitIdx (r: Fin R) (c: Fin C): Fin (R * C) :=
+  let i := r.val * C + c.val
+  let hr := r.isLt
+  let hc := c.isLt
+  let hi := by calc
+    i < r.val * C + C := by
+      apply Nat.add_lt_add_left hc
+    _ ≤ R * C := by
+      rw [← Nat.succ_mul]
+      apply Nat.mul_le_mul_right
+      exact hr
+
+  ⟨i, hi⟩
 
 /-- Unstack-/
 def split {α : Type u} {R C : Nat} (tosplit: Vector (R * C) α) : Vector R (Vector C α) :=
     ofFn fun r =>
       ofFn fun c =>
-        tosplit[r * C + c]'sorry
+        tosplit[splitIdx r c]
 
 
 #eval do
@@ -495,7 +540,8 @@ def split {α : Type u} {R C : Nat} (tosplit: Vector (R * C) α) : Vector R (Vec
   let tosplit := !v[1, 2, 3, 4, 5, 6]
   let split : Vector 2 (Vector 3 Float) := Vector.split tosplit
   IO.println s!"Split vectors: {split}"
-  -- Expected result: [[1, 2, 3], 4], [5, 6]]
+  -- Expected result: [[1, 2, 3], [4, 5, 6]]
+
 
 -- TODO use mathlib and a typeclass
 def norm (v: Vector n Float) : Float := v.map (· ^ 2) |>.sum |>.sqrt
