@@ -555,7 +555,7 @@ def split {α : Type u} {R C : Nat} (tosplit: Vector (R * C) α) : Vector R (Vec
         tosplit[r * C + c]'sorry
 
 
-#eval do
+#eval! do
   -- Test case for stack
   let v1 := !v[1, 2]
   let v2 := !v[3, 4]

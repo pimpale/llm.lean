@@ -1,6 +1,8 @@
 import LinearAlgebra.Vector
 import Llm.FiniteDiff
 
+
+
 -- #eval Vector.matmul !v[!v[1,2,3],!v[4,5,6]]  !v[!v[7,8],!v[9,10],!v[11,12]]
 
 #check
@@ -8,9 +10,6 @@ import Llm.FiniteDiff
   let b: Vector 3 (Vector 2 Float) := sorry
   let c := Vector.matmul a b
   c
-
-
-
 
 def matmul_batched [Add α] [Mul α] [Zero α]
   (a: Vector B (Vector M (Vector P α)))
@@ -68,40 +67,9 @@ def matmul_backward_batched
 
   (dinp_b, dweight)
 
-/--
-  A stream of finite numbers.
-  This is useful for iteration over a range of numbers with proof of the invariant.
--/
-structure FinRange (n : Nat) where
-  curr : Nat
-  ok : curr ≤ n
-
-def fins
-  (start : Nat)
-  (to : Nat)
-  (ok : start ≤ to := by omega)
-  : FinRange to :=
-  { curr := start, ok }
-
-def allFins (n : Nat) : FinRange n := fins 0 n
-
-instance : Stream (FinRange n) (Fin n) where
-  next? (fs : FinRange n) : Option (Fin n × FinRange n) :=
-    if h : fs.curr < n then
-      let i : Fin n := ⟨fs.curr, h⟩
-      some (i, { curr := fs.curr + 1, ok := Nat.succ_le_of_lt h })
-    else
-      none
-
-instance : ToStream (FinRange n) (FinRange n) where
-  toStream := id
-
-#synth ForIn Id (FinRange 10) (Fin 10)
 
 
-
-
-
+open Vector in
 /-- Test for matmul_backward using finite difference-/
 def test_matmul_backward (N M P : Nat) : Bool := Id.run do
   let (ε, ATOL) : Float × Float := (1e-4, 1e-3)
