@@ -11,6 +11,40 @@ instance [Repr α] : ToString (Vector n α) where
   toString v := s!"{repr v}"
 namespace Vector
 
+
+/--
+  A stream of finite numbers.
+  This is useful for iteration over a range of numbers with proof of the invariant.
+-/
+structure FinRange (n : Nat) where
+  curr : Nat
+  ok : curr ≤ n
+
+def fins
+  (start : Nat)
+  (to : Nat)
+  (ok : start ≤ to := by omega)
+  : FinRange to :=
+  { curr := start, ok }
+
+def allFins (n : Nat) : FinRange n := fins 0 n
+
+instance : Stream (FinRange n) (Fin n) where
+  next? (fs : FinRange n) : Option (Fin n × FinRange n) :=
+    if h : fs.curr < n then
+      let i : Fin n := ⟨fs.curr, h⟩
+      some (i, { curr := fs.curr + 1, ok := Nat.succ_le_of_lt h })
+    else
+      none
+
+instance : ToStream (FinRange n) (FinRange n) where
+  toStream := id
+
+#synth ForIn Id (FinRange 10) (Fin 10)
+
+
+
+
 def proveLen {n n': Nat} (v:Vector n α) (h: v.data.size = n'): Vector n' α := {
   data := v.data,
   isEq := h
@@ -161,21 +195,48 @@ instance : Functor (Vector n ·) where
 instance : Pure (Vector n ·) where
   pure x := Vector.replicate n x
 
+
+private def mapIdxHelper  (f: (N:Fin n) → α → β)  : Nat → α → β:=
+  fun i a =>
+  if h0: n = 0 then
+    -- If n = 0, then Fin n is equivalent to Empty, so this case is impossible
+    have h: Fin 0 := sorry -- TODO fixup, maybe rewrite under f binder?
+    Fin.elim0 h
+  else
+    let i' := i % n
+    have h1: i' < n := Nat.mod_lt i (Nat.pos_of_ne_zero h0)
+    f (Fin.mk i' h1) a
+
 @[inline]
-def mapIdx {β : Type u} {n: Nat} (f: Fin n → α → β) (v: Vector n α) : Vector  n β  :=
-  letI f' := fun (i: Fin v.data.size) => f (Fin.mk i.val (Nat.lt_of_lt_of_eq i.isLt v.isEq))
-  {
-    data := Array.mapIdx v.data f',
-    isEq := Eq.trans (Array.size_mapIdx v.data f') v.isEq
-  }
+def mapIdx { α β : Type u} {n: Nat} (f: Fin n → α → β) (v: Vector n α) : Vector n β  :=
+  -- empty case needs special handling because mod is not defined on 0
+  if h0: n = 0 then
+    {
+      data := Array.mkEmpty 0,
+      isEq := by simp [h0]
+    }
+  else
+    have h: n = v.data.size := by simp [v.isEq]
+    -- `f` takes a Nat and mods it by n to get a Fin n
+    let f' : (Nat → α → β) := fun i a =>
+      let i' := i % n
+      have h1: i' < n := Nat.mod_lt i (Nat.pos_of_ne_zero h0)
+      f (Fin.mk i' h1) a
+    {
+      data := Array.mapIdx v.data f',
+      isEq := by simp [v.isEq]
+    }
 
-
+/--The zero vector-/
 def zero [Zero α] {n : Nat} : Vector n α := replicate n 0
 
+/--The all ones vector-/
 def one [One α] {n : Nat} : Vector n α := replicate n 1
 
+/-- Negate a vector-/
 def neg [Neg α] (v: Vector n α) : Vector n α := v.map (-·)
 
+/-- Add two vectors-/
 def add [Add α] (v1: Vector n α) (v2: Vector n α) : Vector n α :=
   zipWith (·+·) v1 v2
 
@@ -261,8 +322,8 @@ theorem get_ofFn {n: Nat} (f: Fin n -> α) (i: Fin n)
 theorem Array_getElem_mk {n: Nat} (a:α) (i: Nat) (h: i < Array.size (Array.mkArray n a))
   : (Array.mkArray n a)[i] = a
   := by
-    rw [Array.getElem_eq_data_getElem]
-    simp [Array.mkArray_data]
+    rw [Array.getElem_eq_getElem_toList]
+    simp [Array.toList_mkArray]
 
 /-- If we construct a vector through replicate, then each element is the provided function -/
 @[simp]
@@ -286,8 +347,10 @@ theorem get_map {β : Type u} {n: Nat} (f: α → β) (v: Vector n α) (i: Fin n
 theorem get_mapIdx {β : Type u} {n: Nat} (f: Fin n → α → β) (v: Vector n α) (i: Fin n)
   : (v.mapIdx f)[i] = f i v[i]
   :=
-    letI f' := fun (i: Fin v.data.size) => f (Fin.mk i.val (Nat.lt_of_lt_of_eq i.isLt v.isEq))
-    Array.getElem_mapIdx v.data f' i (lt_n_lt_data_size (v.mapIdx f) i)
+    let f' : Nat -> α -> β := fun i a => mapIdxHelper f i a
+    -- have i_lt_mapIdx_data_size : i.val < (v.mapIdx f').data.size := lt_n_lt_data_size (v.mapIdx f) i
+    -- v.data.getElem_mapIdx f'  i.val sorry
+    sorry
 
 /-- After push, the last element of the array is what we pushed -/
 theorem get_push_eq {n: Nat} (v: Vector n α) (a: α)
@@ -300,7 +363,7 @@ theorem get_push_eq {n: Nat} (v: Vector n α) (a: α)
      -- prove that (Vector.push v a)[n] = a
      have array_push_v_data_n_eq_a : (Array.push v.data a)[n] = a := by
         simp only [v.isEq.symm]
-        exact Array.get_push_eq v.data a
+        exact Array.getElem_push_eq v.data a
      array_push_v_data_n_eq_a
 
 
@@ -309,7 +372,7 @@ theorem get_push_lt {n: Nat} (v: Vector n α) (a: α) (i: Fin n)
   : (v.push a)[i] = v[i]
   :=
     have i_lt_size_data : i.val < v.data.size := lt_n_lt_data_size v i
-    Array.get_push_lt v.data a i.val i_lt_size_data
+    Array.getElem_push_lt v.data a i.val i_lt_size_data
 
 theorem replace_index (v: Vector n α) (i j: Nat) (h1: i < n) (h2: j < n) (h3: i = j)
   : v[i] = v[j]
