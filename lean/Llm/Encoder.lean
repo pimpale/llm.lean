@@ -10,36 +10,35 @@ def finMaxT_of_finT
   ⟨t.val, h'⟩
 
 def encoder_forward
-  (inp: Vector (Fin V) T)
-  (wte: Vector (Vector Float C) V)
-  (wpe: Vector (Vector Float C) maxT)
+  (inp: Vector T (Fin V))
+  (wte: Vector V (Vector C Float))
+  (wpe: Vector maxT (Vector C Float))
   (h: T ≤ maxT)
-: Vector (Vector Float C) T :=
+: Vector T (Vector C Float) :=
   inp.mapIdx (λ idx ix => (wte.get ix) + (wpe.get (finMaxT_of_finT h idx)))
 
 def encoder_forward_batch
-  (inp: Vector (Vector (Fin V) T) B)
-  (wte: Vector (Vector Float C) V)
-  (wpe: Vector (Vector Float C) maxT)
+  (inp: Vector B (Vector T (Fin V)))
+  (wte: Vector V (Vector C Float))
+  (wpe: Vector maxT (Vector C Float))
   (h: T ≤ maxT)
-: Vector (Vector (Vector Float C) T) B
-  :=
-    inp.map (λ inp => encoder_forward inp wte wpe h)
+: Vector B (Vector T (Vector C Float)) :=
+  inp.map (λ inp => encoder_forward inp wte wpe h)
 
 def encoder_backward
-  (dout: Vector (Vector Float C) T)
-  (inp: Vector (Fin V) T)
+  (dout: Vector T (Vector C Float))
+  (inp: Vector T (Fin V))
   (h: T ≤ maxT)
-: Vector (Vector Float C) V × Vector (Vector Float C) maxT :=
+: Vector V (Vector C Float) × Vector maxT (Vector C Float) :=
 
   let dwte_updater := fun
-    (dwte : Vector (Vector Float C) V)
-    ((d : Vector Float C), (ix : Fin V))
+    (dwte : Vector V (Vector C Float))
+    ((d : Vector C Float), (ix : Fin V))
   => dwte.modify ix (· + d)
 
   let dwpe_updater := fun
-    (dwpe : Vector (Vector Float C) maxT)
-    ((t : Fin T), (d : Vector Float C))
+    (dwpe : Vector maxT (Vector C Float))
+    ((t : Fin T), (d : Vector C Float))
   => dwpe.modify (finMaxT_of_finT h t) (· + d)
 
   let dwte := (dout.zip inp).foldl dwte_updater (init := 0)
@@ -55,17 +54,15 @@ def encoder_backward
   wte: (V,C) of token embeddings, short for "weight token embeddings"
   wpe is (maxT,C) of position embeddings, short for "weight positional embedding"
 --/
-
-
 def encoder_backward_batch
-  (dout_b: Vector (Vector (Vector Float C) T) B)
-  (inp_b: Vector (Vector (Fin V) T) B)
+  (dout_b: Vector B (Vector T (Vector C Float)))
+  (inp_b: Vector B (Vector T (Fin V)))
   (h: T ≤ maxT)
   -- gradient is accumulated, so no batch dim in output `dwte` or `dwpe`
-: Vector (Vector Float C) V × Vector (Vector Float C) maxT
+: Vector V (Vector C Float) ×  Vector maxT (Vector C Float)
 :=
   let all_data :=
-    (dout_b.zip inp_b).map (λ (dout_b, inp_b) => encoder_backward dout_b inp_b h)
+    (dout_b.zip inp_b).map (fun (dout, inp) => encoder_backward dout inp h)
   let (dwte_b, dwpe_b) := (all_data.map Prod.fst, all_data.map Prod.snd)
   -- accumulate over batches
   let (dwte, dwpe) := (dwte_b.sum, dwpe_b.sum)

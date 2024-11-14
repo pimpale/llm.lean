@@ -12,14 +12,14 @@ def tril [Zero α] (fillValue: α) : Vector C (Vector R α)  :=
 
 def attention_forward
   (q k v : Vector T (Vector Dₖ Float))
-: Vector T (Vector Dₖ Float) :=
+: Vector T (Vector Dₖ Float) := do
   let a := q * k.transpose
   let norm_factor :=  (Float.ofNat Dₖ).sqrt
   let a1 := a.map (λ x => x.map (λ y => y / norm_factor))
   let a2 := a1 + tril (-Float.inf)
   let a3 := a2.map softmax
 
-  a3 * v
+  return a3 * v
 
 def attention_backwards
   (dout q k v: Vector T (Vector Dₖ Float))

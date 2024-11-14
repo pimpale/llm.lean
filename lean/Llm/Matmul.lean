@@ -1,5 +1,5 @@
 import LinearAlgebra.Vector
-
+import Llm.FiniteDiff
 
 -- #eval Vector.matmul !v[!v[1,2,3],!v[4,5,6]]  !v[!v[7,8],!v[9,10],!v[11,12]]
 
@@ -16,7 +16,22 @@ def matmul_batched [Add α] [Mul α] [Zero α]
   (a: Vector B (Vector M (Vector P α)))
   (b: Vector B (Vector P (Vector N α)))
 : Vector B (Vector M (Vector N α )) :=
-  .zipWith (· * ·) a b
+  a.zipWith (· * ·) b
+
+def _root_.Std.Range.foldr (r: Std.Range) (f: Nat -> b -> b) (init: b) : b := Id.run do
+  let mut acc := init
+  for i in r do
+    acc := f i acc
+  acc
+
+def _root_.Std.Range.foldl (r: Std.Range) (f: b -> Nat -> b) (init: b) : b := Id.run do
+  let mut acc := init
+  for i in r do
+    acc := f acc i
+  acc
+
+#eval [0:5].foldr (λ i acc => acc + i) 0
+#eval [0:5].foldl (λ acc i => acc + i) 0
 
 /--
   unbatched backward.
@@ -52,3 +67,84 @@ def matmul_backward_batched
   let dweight := dweight_b.sum
 
   (dinp_b, dweight)
+
+/--
+  A stream of finite numbers.
+  This is useful for iteration over a range of numbers with proof of the invariant.
+-/
+structure FinRange (n : Nat) where
+  curr : Nat
+  ok : curr ≤ n
+
+def fins
+  (start : Nat)
+  (to : Nat)
+  (ok : start ≤ to := by omega)
+  : FinRange to :=
+  { curr := start, ok }
+
+def allFins (n : Nat) : FinRange n := fins 0 n
+
+instance : Stream (FinRange n) (Fin n) where
+  next? (fs : FinRange n) : Option (Fin n × FinRange n) :=
+    if h : fs.curr < n then
+      let i : Fin n := ⟨fs.curr, h⟩
+      some (i, { curr := fs.curr + 1, ok := Nat.succ_le_of_lt h })
+    else
+      none
+
+instance : ToStream (FinRange n) (FinRange n) where
+  toStream := id
+
+#synth ForIn Id (FinRange 10) (Fin 10)
+
+
+
+
+
+/-- Test for matmul_backward using finite difference-/
+def test_matmul_backward (N M P : Nat) : Bool := Id.run do
+  let (ε, ATOL) : Float × Float := (1e-4, 1e-3)
+  /- Generate input matrices -/
+  let inp : Vector P (Vector N Float) := Vector.replicate P (Vector.replicate N 1.0)
+  let weight : Vector M (Vector P Float) := Vector.replicate M (Vector.replicate P 2.0)
+  let dout : Vector M (Vector N Float) := Vector.replicate M (Vector.replicate N 3.0)
+
+  /- Compute analytical gradients -/
+  let (dinp, dweight) : Vector P (Vector N Float) × Vector M (Vector P Float) := matmul_backward inp weight dout
+
+  /- Initialize variables for maximum differences -/
+  let mut max_diff_inp := 0.0
+  let mut max_diff_weight := 0.0
+
+  let (col_range, row_range, weight_range) := (allFins P, allFins N, allFins M)
+
+  for p in col_range do
+    for n in row_range do
+
+      let inp_perturbed : Vector P (Vector N Float) := inp.modify p (fun row ↦ row.modify n (fun _ ↦ inp[p][n] + ε))
+      let out : Vector M (Vector N Float) := weight * inp
+      let out_perturbed : Vector M (Vector N Float) := weight * inp_perturbed
+      let loss_diff := ((out_perturbed - out).sum ⬝ᵥ dout.sum)
+      let numerical_gradient := loss_diff / ε
+      let analytical_gradient := dinp[p][n]
+      let diff := (analytical_gradient - numerical_gradient).abs
+      if diff > max_diff_inp then
+        max_diff_inp := diff
+
+  /- Compute numerical gradients for weight -/
+
+  for m in weight_range do
+    for p in col_range do
+      let weight_perturbed := weight.modify m (fun row ↦ row.modify p (fun _ ↦ weight[m][p] + ε))
+      let out : Vector M (Vector N Float) := weight * inp
+      let out_perturbed := weight_perturbed * inp
+      let loss_diff := ((out_perturbed - out).sum ⬝ᵥ dout.sum)
+      let numerical_gradient := loss_diff / ε
+      let analytical_gradient := dweight[m][p]
+      let diff := (analytical_gradient - numerical_gradient).abs
+      if diff > max_diff_weight then
+        max_diff_weight := diff
+
+  /- Check if the maximum differences are within tolerance -/
+  return (max_diff_inp < ATOL) && (max_diff_weight < ATOL)
