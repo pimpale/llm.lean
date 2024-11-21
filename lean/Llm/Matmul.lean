@@ -1,5 +1,6 @@
 import LinearAlgebra.Vector
 import Llm.FiniteDiff
+-- import SciLean
 
 
 
@@ -32,6 +33,7 @@ def _root_.Std.Range.foldl (r: Std.Range) (f: b -> Nat -> b) (init: b) : b := Id
 #eval [0:5].foldr (λ i acc => acc + i) 0
 #eval [0:5].foldl (λ acc i => acc + i) 0
 
+-- set_option diagnostics true
 /--
   unbatched backward.
   returns dinp, dweight
@@ -66,7 +68,6 @@ def matmul_backward_batched
   let dweight := dweight_b.sum
 
   (dinp_b, dweight)
-
 
 
 open Vector in

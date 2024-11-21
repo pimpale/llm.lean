@@ -1,4 +1,9 @@
 import Mathlib.Algebra.Group.ZeroOne
+-- import Batteries.Data.Vector
+-- open Batteries
+
+
+-- #eval Vector.size
 /-- The base array type.-/
 structure Vector (n: Nat) (α : Type u)  where
   /-- Underlying data-/
@@ -10,7 +15,6 @@ deriving Repr, Hashable
 instance [Repr α] : ToString (Vector n α) where
   toString v := s!"{repr v}"
 namespace Vector
-
 
 /--
   A stream of finite numbers.
@@ -160,6 +164,11 @@ def truncateTR {α: Type u} {n : Nat} (v: Vector n α) (n': Nat) (h: n' ≤ n): 
 def truncate {α: Type u} {n : Nat} (v: Vector n α) (n': Nat) (h: n' ≤ n): Vector n' α :=
   .ofFn (v[·])
 
+@[csimp]
+theorem truncate_eq_truncateTR : @truncate = @truncateTR := by sorry
+
+
+
 @[specialize]
 def zipWithAux {i n:Nat} (f : a → b → c) (as : Vector n a) (bs : Vector n b) (acc : Vector i c ) (h : i ≤ n) : Vector n c  :=
   if h1: i = n then
@@ -196,7 +205,7 @@ instance : Pure (Vector n ·) where
   pure x := Vector.replicate n x
 
 
-private def mapIdxHelper  (f: (N:Fin n) → α → β)  : Nat → α → β:=
+private def mapIdxHelper  (f: (N:Fin n) → α → β) : Nat → α → β :=
   fun i a =>
   if h0: n = 0 then
     -- If n = 0, then Fin n is equivalent to Empty, so this case is impossible
@@ -529,30 +538,65 @@ def testMatrixVectorMul : IO Unit := do
 
 #eval testMatrixVectorMul
 
-
--- TODO finish
--- instance : HAppend (Vector n α) (Vector m α) (Vector (n+m) α ) where
---   hAppend v1 v2 := Id.run do
---     let mut out := v1
---     for v in v2 do
---       out := out.push v
-
---     out
-
-
-/-- stack along first-/
-def stack (vecs: Vector n (Vector m α)) : Vector (n*m) α :=
+/-- Append two vectors -/
+def append (v1: Vector n α) (v2: Vector m α) : Vector (n+m) α :=
   {
-    data := vecs.foldl (λ a b => Array.append a b.data) Array.empty,
+    data := v1.data.append v2.data,
     isEq := by
-      sorry
+      simp [Array.size_append, v1.isEq, v2.isEq]
   }
+
+instance : HAppend (Vector n α) (Vector m α) (Vector (n+m) α ) where hAppend := append
+
+
+def splitIdx (r: Fin R) (c: Fin C): Fin (R * C) :=
+  let idx := r * C + c
+
+  let hi := by calc
+    idx < r * C + C := by
+      apply Nat.add_lt_add_left c.isLt
+    _ ≤ R * C := by
+      rw [← Nat.succ_mul]
+      apply Nat.mul_le_mul_right
+      exact r.isLt
+
+  ⟨idx, hi⟩
+
+
+def stack (vecs: Vector R (Vector C α)) : Vector (R * C) α :=
+  if h: R = 0 then
+    {
+      data := Array.empty,
+      isEq := by
+        simp [h]
+        exact Array.toList_empty
+    }
+  else
+    let first := stack vecs.pop
+    let last := vecs[R-1]
+    let q := append first last
+
+    {
+      data := q.data,
+      isEq := by
+        simp [q.isEq, Nat.mul_sub_right_distrib]
+        apply Nat.sub_add_cancel
+        -- we need to show that  m ≤ n * m
+        conv =>
+          lhs
+          rw [← Nat.one_mul C]
+        apply Nat.mul_le_mul_right C
+        -- we need to show that 1 ≤ n
+        exact Nat.succ_le_of_lt (Nat.pos_of_ne_zero h)
+    }
 
 /-- Unstack-/
 def split {α : Type u} {R C : Nat} (tosplit: Vector (R * C) α) : Vector R (Vector C α) :=
     ofFn fun r =>
       ofFn fun c =>
-        tosplit[r * C + c]'sorry
+        tosplit[splitIdx r c]
+
+
 
 
 #eval! do
@@ -560,13 +604,13 @@ def split {α : Type u} {R C : Nat} (tosplit: Vector (R * C) α) : Vector R (Vec
   let v1 := !v[1, 2]
   let v2 := !v[3, 4]
   let v3 := !v[5, 6]
-  let stacked := Vector.stack !v[v1, v2, v3]
+  let stacked := !v[v1, v2, v3].stack
   IO.println s!"Stacked vector: {stacked}"
   -- Expected result: [1, 2, 3, 4, 5, 6]
 
   -- Test case for split
   let tosplit := !v[1, 2, 3, 4, 5, 6]
-  let split : Vector 2 (Vector 3 Float) := Vector.split tosplit
+  let split : Vector 2 (Vector 3 Float) := tosplit.split
   IO.println s!"Split vectors: {split}"
   -- Expected result: [[1, 2, 3], 4], [5, 6]]
 
