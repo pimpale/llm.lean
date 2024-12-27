@@ -1,0 +1,28 @@
+name = "llm.lean"
+version = "0.1.0"
+
+
+[[lean_lib]]
+name = "LinearAlgebra"
+src = "LinearAlgebra"
+
+[[lean_lib]]
+name = "Llm"
+src = "Llm"
+
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4.git"
+
+[[require]]
+name = "scilean"
+git = "https://github.com/lecopivo/scilean.git"
+rev = "1de5c61aba75b496962ba9eb991570bb21169516"
+
+[[require]]
+name = "plausible"
+git = "https://github.com/leanprover-community/plausible.git"
+
+[[require]]
+name = "batteries"
+git = "https://github.com/leanprover-community/batteries.git"
