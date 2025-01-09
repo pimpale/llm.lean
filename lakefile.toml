@@ -1,6 +1,6 @@
 name = "llm.lean"
 version = "0.1.0"
-
+authors = ["Alok Singh <alokbeniwal@gmail.com>", "Govind Pimpale"]
 
 [[lean_lib]]
 name = "LinearAlgebra"
@@ -17,12 +17,14 @@ git = "https://github.com/leanprover-community/mathlib4.git"
 [[require]]
 name = "scilean"
 git = "https://github.com/lecopivo/scilean.git"
-rev = "1de5c61aba75b496962ba9eb991570bb21169516"
+rev = "53f112d"
 
 [[require]]
 name = "plausible"
 git = "https://github.com/leanprover-community/plausible.git"
+rev = "main"
 
 [[require]]
 name = "batteries"
 git = "https://github.com/leanprover-community/batteries.git"
+rev = "main"
