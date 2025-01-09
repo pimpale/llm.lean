@@ -2,19 +2,10 @@ import Mathlib.Algebra.Group.ZeroOne
 -- import Batteries.Data.Vector
 -- open Batteries
 
+abbrev Vec (n: Nat) (α : Type u) := Vector α n
 
--- #eval Vector.size
-/-- The base array type.-/
-structure Vector (n: Nat) (α : Type u)  where
-  /-- Underlying data-/
-  data: Array α
-  /-- a proof that the data.length = n -/
-  isEq: data.size = n := by rfl
-deriving Repr, Hashable
 
-instance [Repr α] : ToString (Vector n α) where
-  toString v := s!"{repr v}"
-namespace Vector
+namespace Vec
 
 /--
   A stream of finite numbers.
@@ -46,62 +37,40 @@ instance : ToStream (FinRange n) (FinRange n) where
 
 #synth ForIn Id (FinRange 10) (Fin 10)
 
+@[inline]
+def empty : Vec 0 α := Vector.mkEmpty 0
+
+/-- Max of a vector. Returns a default value if the vector is empty.-/
+def max [Max α] [Inhabited α] (v: Vec n α) : α  :=
+  v.foldl (fun max' i => Max.max max' i) v[0]!
 
 
-
-def proveLen {n n': Nat} (v:Vector n α) (h: v.data.size = n'): Vector n' α := {
-  data := v.data,
-  isEq := h
-}
+/-- Replicate a value n times. -/
+@[inline]
+def replicate (n: Nat) (x: α) : Vec n α := Vector.mkVector n x
 
 @[inline]
-def empty : Vector 0 α := {
-  data := Array.empty
-  isEq := List.length_nil
-}
-
-def max (v: Vector n Int) : Option Int  := Id.run do
-  let mut max := v.data[0]!
-  for _i_in_range: i in [1: n] do
-    if v.data[i]! > max then
-      max := v.data[i]!
-  return max
-
-
-@[inline]
-def replicate (n: Nat) (x: α) : Vector n α := {
-    data := Array.mkArray n x,
-    isEq := Array.size_mkArray n x
-}
-
-@[inline]
-def of (a: α) : Vector n α :=
+def of (a: α) : Vec n α :=
   replicate n a
 
 @[inline]
-def ofFn {n: Nat} (f: Fin n -> α) : Vector n α := {
-  data := Array.ofFn f,
-  isEq := Array.size_ofFn f
-}
+def ofFn {n: Nat} (f: Fin n → α ) : Vec n α := Vector.ofFn f
 
-def ofArray (a : Array α) : Vector a.size α := {
-  data := a,
-  isEq := rfl
-}
-
+/-- Convert an array to a vector. -/
 @[inline]
-def ofList (l : List α) : Vector l.length α  := {
-  data := Array.mk l,
-  isEq := Array.size_mk l
-}
+def ofArray (a : Array α) : Vec a.size α := Vector.mk a (by rfl)
+
+/-- Convert a list to a vector. -/
+@[inline]
+def ofList (l : List α) : Vec l.length α  := Vec.ofArray l.toArray
 
 syntax "!v[" withoutPosition(sepBy(term, ", ")) "]" : term
 macro_rules
-  | `(!v[ $elems,* ]) => `(Vector.ofList [ $elems,* ])
+  | `(!v[ $elems,* ]) => `(Vec.ofList [ $elems,* ])
 
 @[inline]
-def singleton (x:α) : Vector 1 α  :=
-  Vector.replicate 1 x
+def singleton (x : α) : Vec 1 α  :=
+  Vector.singleton x
 
 /-- prove that i < v.data.size if i < n-/
 theorem lt_n_lt_data_size {n :Nat} (v: Vector n α) (i : Fin n)
@@ -114,8 +83,7 @@ theorem lt_data_size_lt_n {i n :Nat}  (v: Vector n α) (h: i < v.data.size)
   := v.isEq.symm ▸ h
 
 @[inline]
-def get (v: Vector n α) (i : Fin n) : α :=
-  v.data.get ⟨i, (lt_n_lt_data_size v i)⟩
+def get (v: Vector n α) (i : Fin n) : α := Vector.get v i
 
 -- instance to get element
 instance : GetElem (Vector n α) Nat α (fun _ i => i < n) where
@@ -166,8 +134,6 @@ def truncate {α: Type u} {n : Nat} (v: Vector n α) (n': Nat) (h: n' ≤ n): Ve
 
 @[csimp]
 theorem truncate_eq_truncateTR : @truncate = @truncateTR := by sorry
-
-
 
 @[specialize]
 def zipWithAux {i n:Nat} (f : a → b → c) (as : Vector n a) (bs : Vector n b) (acc : Vector i c ) (h : i ≤ n) : Vector n c  :=
@@ -281,7 +247,7 @@ def transpose  (v: Vector R (Vector C α )) : Vector C (Vector R α ) :=
     v[r][c]
 
 -- TODO weaken to semiring
-def matmul [Add α] [Mul α] [Zero α] (a: Vector R (Vector  I α)) (b: Vector I (Vector  C α )) : Vector R (Vector C α )  :=  Id.run do
+def matmul [Add α] [Mul α] [Zero α] (a: Vector R (Vector  I α)) (b: Vector I (Vector  C α )) : Vector R (Vector C α )  :=
   let rows := a
   let cols := b.transpose
 
