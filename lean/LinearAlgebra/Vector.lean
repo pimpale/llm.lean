@@ -4,7 +4,6 @@ import Mathlib.Algebra.Group.ZeroOne
 
 abbrev Vec (n: Nat) (α : Type u) := Vector α n
 
-
 namespace Vec
 
 /--
@@ -35,15 +34,12 @@ instance : Stream (FinRange n) (Fin n) where
 instance : ToStream (FinRange n) (FinRange n) where
   toStream := id
 
-#synth ForIn Id (FinRange 10) (Fin 10)
-
 @[inline]
 def empty : Vec 0 α := Vector.mkEmpty 0
 
 /-- Max of a vector. Returns a default value if the vector is empty.-/
 def max [Max α] [Inhabited α] (v: Vec n α) : α  :=
   v.foldl (fun max' i => Max.max max' i) v[0]!
-
 
 /-- Replicate a value n times. -/
 @[inline]
@@ -580,9 +576,34 @@ def split {α : Type u} {R C : Nat} (tosplit: Vector (R * C) α) : Vector R (Vec
   IO.println s!"Split vectors: {split}"
   -- Expected result: [[1, 2, 3], 4], [5, 6]]
 
--- TODO use mathlib and a typeclass
-def norm (v: Vector n Float) : Float := v.map (· ^ 2) |>.sum |>.sqrt
+def Vector.sum (v: Vector α n) : α := v.foldl (· + ·) 0
+def Vector.sum1 (v: Vector α (n+1) ) : α := Id.run do
+  let mut acc := v[0]
+  for i in [1:n] do
+    acc := acc + v[i]
+  acc
 
-def mean (v: Vector n Float) : Float :=
+/-
+## kyle ellefson wishlist
+- byaes net
+  - user defined tabular and continuous distributions
+    -
+- [x] gradient descent
+- [~] linear algebra
+- [ ] marginalization (with syntax)
+
+-/
+
+def _root_.Vector.sum [Add α] [Zero α] (v: Vector α n) : α := v.foldl (· + ·) 0
+-- TODO use mathlib and a typeclass
+def norm (v: Vector  Float n) : Float := v.map (· ^ 2) |>.sum |>.sqrt
+
+
+def mean [Add α] (v: Vector α n) : α :=
   v.sum / n.toFloat
 end Vector
+
+
+namespace Plot
+-- 
+end Plot

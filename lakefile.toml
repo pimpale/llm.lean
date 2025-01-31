@@ -10,6 +10,11 @@ src = "LinearAlgebra"
 name = "Llm"
 src = "Llm"
 
+[[lean_lib]]
+name = "Plot"
+src = "Plot"
+
+
 [[require]]
 name = "mathlib"
 git = "https://github.com/leanprover-community/mathlib4.git"

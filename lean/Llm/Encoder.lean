@@ -9,6 +9,18 @@ def finMaxT_of_finT
   let h' := Nat.le_trans t.isLt h
   ⟨t.val, h'⟩
 
+abbrev Matrix (Rows Cols : Nat) (α : Type) := Vector Rows (Vector Cols α)
+
+def good (input : Float) : Float := sorry
+
+def matMul
+  (m1: Matrix R1 C1 α)
+  (m2: Matrix C1 C2 α)
+: Matrix R1 C2 α
+:=
+  m1.map (λ row => m2.map (λ col => row.zip col))
+
+
 def encoder_forward
   (inp: Vector T (Fin V))
   (wte: Vector V (Vector C Float))

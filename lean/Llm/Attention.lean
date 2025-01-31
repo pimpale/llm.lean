@@ -1,6 +1,7 @@
 import LinearAlgebra.Vector
 import Llm.Matmul
 import Llm.Softmax
+import SciLean
 
 def tril [Zero α] (fillValue: α) : Vector C (Vector R α)  :=
   Vector.ofFn (fun c =>

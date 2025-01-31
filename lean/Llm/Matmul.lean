@@ -1,7 +1,9 @@
 import LinearAlgebra.Vector
 import Llm.FiniteDiff
--- import SciLean
+import SciLean
 
+
+#eval ⊞[1,2,((3:UInt32))] * ⊞[4,5,6]
 
 
 -- #eval Vector.matmul !v[!v[1,2,3],!v[4,5,6]]  !v[!v[7,8],!v[9,10],!v[11,12]]
