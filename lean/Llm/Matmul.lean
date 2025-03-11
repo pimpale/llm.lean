@@ -1,36 +1,48 @@
-import LinearAlgebra.Vector
-
 
 -- #eval Vector.matmul !v[!v[1,2,3],!v[4,5,6]]  !v[!v[7,8],!v[9,10],!v[11,12]]
 
+import Llm.FloatTensor
+
+def dot [Add α] [Mul α] [Zero α]
+  (a: Vector α N)
+  (b: Vector α N)
+: α :=
+  (a.zipWith (· * ·) b).sum
+
+def matmul [Add α] [Mul α] [Zero α]
+  (a: Vector (Vector α P) M)
+  (b: Vector (Vector α N) P)
+: Vector (Vector α N) M :=
+  let b_t := transpose b
+  Vector.ofFn (fun i =>
+    Vector.ofFn (fun j => dot a[i] b_t[j])
+  )
+
 #check
-  let a: Vector 2 (Vector 3 Float) := sorry
-  let b: Vector 3 (Vector 2 Float) := sorry
-  let c := Vector.matmul a b
+  let a: Vector (Vector Float 3) 2 := sorry
+  let b: Vector (Vector Float 2) 3 := sorry
+  let c := matmul a b
   c
 
 
-
-
 def matmul_batched [Add α] [Mul α] [Zero α]
-  (a: Vector B (Vector M (Vector P α)))
-  (b: Vector B (Vector P (Vector N α)))
-: Vector B (Vector M (Vector N α )) :=
-  .zipWith (· * ·) a b
+  (a: Vector (Vector (Vector α P) M) B)
+  (b: Vector (Vector (Vector α N) P) B)
+: Vector (Vector (Vector α N) M) B :=
+  .zipWith matmul a b
 
 /--
   unbatched backward.
   returns dinp, dweight
 -/
 def matmul_backward
-  (inp: Vector P (Vector N Float))
-  (weight: Vector M (Vector P Float))
-  (dout: Vector M (Vector N Float))
-: (Vector P (Vector N Float )) × (Vector M (Vector P Float ))
+  (inp: Vector (Vector Float N) P)
+  (weight: Vector (Vector Float P) M)
+  (dout: Vector (Vector Float N) M)
+: (Vector (Vector Float N) P) × (Vector (Vector Float P) M)
 :=
-
-  let dinp := weight.transpose * dout
-  let dweight := dout * inp.transpose
+  let dinp := matmul (transpose weight) dout
+  let dweight := matmul dout (transpose inp)
 
   (dinp, dweight)
 
@@ -38,17 +50,17 @@ def matmul_backward
   We reduce the weight but not the input.
 -/
 def matmul_backward_batched
-  (inp: Vector B (Vector P (Vector N Float)))
-  (weight: Vector B (Vector M (Vector P Float)))
-  (dout: Vector B (Vector M (Vector N Float)))
-: (Vector B (Vector P (Vector N Float))) × (Vector M (Vector P Float))
+  (inp: Vector (Vector (Vector Float N) P) B)
+  (weight: Vector (Vector (Vector Float P) M) B)
+  (dout: Vector (Vector (Vector Float N) M) B)
+: (Vector (Vector (Vector Float N) P) B) × (Vector (Vector Float P) M)
 :=
-  let inp_t := inp.map (·.transpose)
-  let weight_t := weight.map (·.transpose)
+  let inp_t := inp.map transpose
+  let weight_t := weight.map transpose
 
   let dinp_b := matmul_batched weight_t dout
   let dweight_b := matmul_batched dout inp_t
 
-  let dweight := dweight_b.sum
+  let dweight :=  dweight_b.sum
 
   (dinp_b, dweight)

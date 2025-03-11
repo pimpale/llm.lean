@@ -1,4 +1,3 @@
-import Mathlib.Algebra.Group.ZeroOne
 import Mathlib.Tactic.Ring
 
 /-- The base array type.-/
