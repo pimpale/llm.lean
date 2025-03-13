@@ -1,5 +1,3 @@
-import Mathlib.Algebra.Group.Basic
-
 def relu [Max α] [Zero α] (x : α) : α := max x 0
 
 
